@@ -1,6 +1,8 @@
-# Sentinel Playground - Script
+# SecureHacks - Script
 
 ![logo](https://github.com/SecureHats/Sentinel-playground/blob/main/media/securehats-layers-200x.png)
 
-The Sentinel playground is a project to deploy an initial Azure Sentinel environment pre-provisioned with sample data. 
-This to speed up the deployment for Proof of Concept and demo scenarios.
+SecureHacks is a project to discover Azure & Azure AD permissions with a comprimised account. 
+This can be useful to discovery vulnerabilities in IAM configurations within a environment.
+
+**_WARNING! The code is for Proof of Concept only and should not be used in production without explict approval of the owner._**
