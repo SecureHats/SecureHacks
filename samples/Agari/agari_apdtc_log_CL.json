@@ -1,0 +1,59 @@
+[
+  {
+    "TenantId": "27201ba9-a494-40b0-bca0-364028a854c5",
+    "SourceSystem": "RestAPI",
+    "MG": "",
+    "ManagementGroupName": "",
+    "TimeGenerated [UTC]": "11/17/2020, 3:40:19.942 PM",
+    "Computer": "",
+    "RawData": "",
+    "id_g": "52289fcc-28ea-11eb-8461-0242ac140004",
+    "timestamp_ms": 1605627243000,
+    "to": "user1@mydomain.com",
+    "from": "User A <usera@domaina.com>",
+    "from_domain": "domaina.com",
+    "attack_types": [
+      "low_trust (Low trust domain)"
+    ],
+    "Type": "agari_apdtc_log_CL",
+    "_ResourceId": ""
+  },
+  {
+    "TenantId": "27201ba9-a494-40b0-bca0-364028a854c5",
+    "SourceSystem": "RestAPI",
+    "MG": "",
+    "ManagementGroupName": "",
+    "TimeGenerated [UTC]": "11/17/2020, 4:20:22.724 PM",
+    "Computer": "",
+    "RawData": "",
+    "id_g": "2d801dca-28f0-11eb-90ff-0242ac130004",
+    "timestamp_ms": 1605629758000,
+    "to": "user2@mydomain.com",
+    "from": "User B <userb@domainb.com>",
+    "from_domain": "domainb.com",
+    "attack_types": [
+      "low_trust (Low trust domain)"
+    ],
+    "Type": "agari_apdtc_log_CL",
+    "_ResourceId": ""
+  },
+  {
+    "TenantId": "27201ba9-a494-40b0-bca0-364028a854c5",
+    "SourceSystem": "RestAPI",
+    "MG": "",
+    "ManagementGroupName": "",
+    "TimeGenerated [UTC]": "11/17/2020, 3:35:21.972 PM",
+    "Computer": "",
+    "RawData": "",
+    "id_g": "483cc29a-28ea-11eb-90ff-0242ac130004",
+    "timestamp_ms": 1605627226000,
+    "to": "user3@mydomain.com",
+    "from": "User C <userc@domainc.com>",
+    "from_domain": "domainc.com",
+    "attack_types": [
+      "low_trust (Low trust domain)"
+    ],
+    "Type": "agari_apdtc_log_CL",
+    "_ResourceId": ""
+  }
+]
