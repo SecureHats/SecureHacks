@@ -4,10 +4,12 @@
 [![Maintenance](https://img.shields.io/maintenance/yes/2021.svg?style=flat-square)]()
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
 
-# SecureHacks - Script
+# SecureHacks
 
-SecureHacks is a project to collect PowerShell and Python scripts for discovery of vulnerabilities in Azure & Azure AD. 
-This can be useful to discovery vulnerabilities in IAM configurations etc.
+Azure is by default available to every user in the organization. Clients who for instance have Office 365 oftenly haven't set up any conditional access policy to prevent users from logging in to the Azure [portal](https://aad.portal.azure.com) and retrieve every user, role or group. Most of the organizations neither monitor what users are doing in the Azure portal either. So, what if you have a user account in a tenant? What is there to explore and how can we exploit even (default) misconfigurations.
+
+SecureHacks is a project existing out of PowerShell and Python scripts for discovery of vulnerabilities in Azure & Azure AD.
+Purpose is to create scripts than can be used from any machine, without any flags being triggered by defender or other security tools.
 
 Maybe this project will be extended with files, policies, kusto queries etc. for detecting and remidiating the discoveries.
 
