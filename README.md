@@ -6,8 +6,10 @@
 
 # SecureHacks - Script
 
-SecureHacks is a project to discover Azure & Azure AD permissions with a comprimised account. 
-This can be useful to discovery vulnerabilities in IAM configurations within a environment.
+SecureHacks is a project to collect PowerShell and Python scripts for discovery of vulnerabilities in Azure & Azure AD. 
+This can be useful to discovery vulnerabilities in IAM configurations etc.
+
+Maybe this project will be extended with files, policies, kusto queries etc. for detecting and remidiating the discoveries.
 
 **_WARNING! The code is for Proof of Concept only and should not be used in production without explict approval of the owner._**
 
