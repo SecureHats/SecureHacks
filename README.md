@@ -6,8 +6,6 @@
 
 # SecureHacks - Script
 
-![logo](https://github.com/SecureHats/Sentinel-playground/blob/main/media/securehats-layers-200x.png)
-
 SecureHacks is a project to discover Azure & Azure AD permissions with a comprimised account. 
 This can be useful to discovery vulnerabilities in IAM configurations within a environment.
 
