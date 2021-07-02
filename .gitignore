@@ -1,0 +1,7 @@
+bin
+obj
+outputs
+export
+appsettings.json
+local.settings.json
+.vscode/*
