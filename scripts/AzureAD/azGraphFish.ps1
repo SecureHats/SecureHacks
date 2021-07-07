@@ -63,9 +63,15 @@ function Get-GraphRecursive {
     }
 
     # Calls itself when there is a nextlink, in order to get next page
-    if ($result.'@odata.nextLink') {
-        Get-GraphRecursive -Url $result.'@odata.nextLink' @requestBody
+    try {
+        if ($result.'@odata.nextLink') {
+            Get-GraphRecursive -Url $result.'@odata.nextLink' @requestBody
+        }
     }
+    catch {
+        # Nothing to process
+    }
+
 }
 
 function Get-Members {
@@ -73,7 +79,6 @@ function Get-Members {
     [Alias()]
     Param
     (
-
         [Parameter(Mandatory = $false,
             Position = 0)]
         [array]$ArrayObject,
@@ -94,32 +99,42 @@ function Get-Members {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             Position = 4)]
-        [String] $type
+        [String] $type,
+
+        [Parameter(Mandatory = $false,
+            ValueFromPipeline = $true,
+            Position = 5)]
+        [String] $roleTemplateId
     )
 
-    if ($type -like "*groups*") {
-        $graph = 'groups'
-    }
-    if ($type -like "*role*") {
-        $graph = 'directoryRoles'
-    }
-
-    if ($type -like "*owners*") {
-        $objectType = 'Owner'
-    }
-    if ($type -like "*members*") {
-        $objectType = 'Member'
-    }
-    if ($type -like "*azglobaladminrights*") {
-        $objectType = 'Member'
-        $graph = 'directoryRoles'
-        $roleTemplateId = '62e90394-69f5-4237-9190-012177145e10'
-    }
-
-    if ($type -like "*azprivroleadminrights*") {
-        $objectType = 'Member'
-        $graph = 'directoryRoles'
-        $roleTemplateId = "e8611ab8-c189-46e8-94e1-60213ab1f814"
+    switch ($type) {
+        "azgroupmembers" {
+            $graph      = 'groups'
+            $objectType = 'Member'
+        }
+        "azgroupowners" {
+            $graph      = 'groups'
+            $objectType = 'Owner'
+        }
+        "azrolemembers" {
+            $graph      = 'directoryRoles'
+            $objectType = 'Member'
+        }
+        "azglobaladminrights" {
+            $graph          = 'directoryRoles'
+            $objectType     = 'Member'
+            $roleTemplateId = '62e90394-69f5-4237-9190-012177145e10'
+        }
+        "azprivroleadminrights" {
+            $graph          = 'directoryRoles'
+            $objectType     = 'Member'
+            $roleTemplateId = "e8611ab8-c189-46e8-94e1-60213ab1f814"
+        }
+        "azapplicationowners" {
+            $graph          = 'applications'
+            $objectType     = 'Owner'
+        }
+        Default {}
     }
 
     $date = get-date -f yyyyMMdd
@@ -129,8 +144,6 @@ function Get-Members {
     if ($roleTemplateId) {
         $uri = "$baseUrl/$graph/roleTemplateId=$($roleTemplateId)/$($objectType)s"
         $accounts = (Get-GraphRecursive -Url $uri @requestBody)
-
-        Write-Output $uri
 
         foreach ($account in $accounts) {
             $currentItem = [PSCustomObject]@{
@@ -147,7 +160,7 @@ function Get-Members {
     }
     else {
         foreach ($item in $ArrayObject) {
-            Write-Output "[$($graph): $($item.displayName)]"
+            Write-Output "[$($graph): $($item.displayName)]`n"
 
             $uri = "$baseUrl/$graph/$($item.id)/$($objectType)s"
             $accounts = (Get-GraphRecursive -Url $uri @requestBody)
@@ -220,13 +233,13 @@ function Export-Data {
         }
 
         if ($item.userPrincipalName) {
-            $currentItem | Add-Member -MemberType NoteProperty -Name UserPrincipalName -Value "$($item.userPrincipalName)"
-            $currentItem | Add-Member -MemberType NoteProperty -Name TenantId -Value "$($context.tenantId)"
+            $currentItem | Add-Member -MemberType NoteProperty -Name UserPrincipalName -Value "$($item.userPrincipalName)" -Force
+            $currentItem | Add-Member -MemberType NoteProperty -Name TenantId -Value "$($context.tenantId)" -Force
         }
 
         if ($item.appId) {
-            $currentItem | Add-Member -MemberType NoteProperty -Name ServicePrincipalId -Value "$($item.id)"
-            $currentItem | Add-Member -MemberType NoteProperty -Name ServicePrincipalType -Value "ServicePrincipal"
+            $currentItem | Add-Member -MemberType NoteProperty -Name ServicePrincipalId -Value "$($item.id)" -Force
+            $currentItem | Add-Member -MemberType NoteProperty -Name ServicePrincipalType -Value "ServicePrincipal" -Force
         }
 
         Write-Output $currentItem
@@ -242,6 +255,56 @@ function Export-Data {
     $json | ConvertTo-Json | Out-File ".\export\$date-$($type).json"
 }
 
+function Get-PasswordResetRights {
+
+    $metadata = New-Object System.Collections.ArrayList
+    $dataHash = New-Object System.Collections.ArrayList
+
+    $permissionList = Get-Content .\documentation\passwordResetRoles.json | ConvertFrom-Json
+
+    foreach ($item in ($permissionList)) {
+        Write-Host $item.Role -ForegroundColor Yellow
+        $passwordAdmins = ($RoleMembers | Where-Object GroupName -eq $item.Role)
+        if ($passwordAdmins) {
+            $adminRoleGroups = ($item.PasswordResetPermissions).Role
+            Write-Output "Admin Roles: $($adminRoleGroups)"
+
+            foreach ($adminRoleGroup in $adminRoleGroups) {
+                Write-Output "Admin Role Group" $adminRoleGroup
+                Write-Output ($RoleMembers | Where-Object GroupName -eq $adminRoleGroup)
+                foreach ($account in ($RoleMembers | Where-Object GroupName -eq $adminRoleGroup)) {
+                    foreach ($pwdAdmin in $passwordAdmins) {
+                        if ($pwdAdmin.MemberName -ne $account.MemberName) {
+                            $currentItem = [PSCustomObject]@{
+                                UserName           = $pwdAdmin.MemberName
+                                ObjectType         = $pwdAdmin.MemberType
+                                UserId             = $pwdAdmin.MemberId
+                                UserOnPremId       = $pwdAdmin.MemberOnPremId
+                                TargetUserName     = $account.MemberName
+                                TargetUserId       = $account.MemberId
+                                TargetUserOnPremId = $account.MemberOnPremId
+                            }
+
+                            if ($account.MemberType -eq "User" ){
+                                $null = $dataHash.Add($currentItem)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        $passwordAdmins = ''
+    }
+
+    $json = [ordered]@{}
+    $json.add("meta", [ordered]@{
+            count   = $dataHash.count
+            type    = "azpwdresetrights"
+            version = 4
+        })
+    $json.add("data", ($dataHash | Sort-Object -unique -property Username, TargetUserName ))
+    $json | ConvertTo-Json | Out-File ".\export\$date-azpwdresetrights.json"
+}
 function Connect-Tentant {
     az login | Out-Null #--allow-no-subscriptions | Out-Null
 
@@ -300,9 +363,9 @@ $applications | ConvertTo-Json -Depth 10 | Out-File ".\export\$date-applications
 $groupMembers = (Get-Members @requestBody -ArrayObject $groups -Type "azgroupmembers")
 $groupOwners = (Get-Members @requestBody -ArrayObject $groups -Type "azgroupowners")
 
-$roleMembers = (Get-Members @requestBody -ArrayObject $directoryRoles -Type "azgroupmembers")
+$roleMembers = (Get-Members @requestBody -ArrayObject $directoryRoles -Type "azrolemembers")
 $roleGAMembers = (Get-Members @requestBody -ArrayObject $directoryRoles -Type "azglobaladminrights")
-$rolePAMembers = (Get-Members @requestBody -ArrayObject $directoryRoles -Type "azprivroleadminrights")
+$rolePAMembers = (Get-Members @requestBody -ArrayObject $directoryRoles -Type "azprivroleadminrights" -erroraction silentlycontinue)
 
 
 if ($hound) {
@@ -310,6 +373,7 @@ if ($hound) {
     export-data $users -type azusers
     export-data $groups -type azgroups
     export-data $directoryRoles -type azdirectoryroles
+    export-data $applications -type azapplicationowners
 }
 #endregion AD
 
