@@ -510,6 +510,29 @@ function Start-GraphFish {
             "Method"         = 'GET'
         }
 
+
+        <#
+            {
+            "requests": [
+                {
+                    "id": "1",
+                    "method": "GET",
+                    "url": "/organization"
+                },
+                {
+                    "id": "2",
+                    "method": "GET",
+                    "url": "/users"
+                },
+                {
+                    "id": "3",
+                    "method": "GET",
+                    "url": "/groups"
+                }
+            ]
+        }
+        $resultList  = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/$batch")
+        #>
         Write-Output "Collecting RAW tenant data"
         $organizations  = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/organization")
         $users          = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/users")
