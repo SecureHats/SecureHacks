@@ -326,7 +326,7 @@ function Get-PasswordResetRights {
                                 TargetUserId       = $account.MemberId
                                 TargetUserOnPremId = $account.MemberOnPremId
                             }
-                                $null = $dataHash.Add($currentItem)
+                            $null = $dataHash.Add($currentItem)
                         }
                     }
                 }
@@ -339,45 +339,77 @@ function Get-PasswordResetRights {
     $null = $json.add("data", ($dataHash | Sort-Object -unique -property Username, TargetUserName ))
 
     Get-Chunk -Coll $json -Directory $outputDirectory -Type "pwdresetrights"
-    $json| ConvertTo-Json | Out-File "$outputDirectory\$date-azpwdresetrights.json"
+    $json | ConvertTo-Json | Out-File "$outputDirectory\$date-azpwdresetrights.json"
 }
+
 function Get-GraphToken {
-    [CmdletBinding()]
-    [OutputType([string])]
-    param (
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
-        [ValidateSet('AzureAd', 'Azure')]
-        [string]$resource
-    )
+    [cmdletbinding()]
+    param( 
+        [Parameter()]
+        $ClientID = '1950a258-227b-4e31-a9cf-717495945fc2',
+        
+        [Parameter()]
+        $TenantID = 'common',
+        
+        [Parameter()]
+        $Resource = "https://graph.microsoft.com/",
 
-    Begin {
-        try {
-            az version | out-Null
+        [Parameter()]
+        $Scope = "reports.Read",
+        
+        # Timeout in seconds to wait for user to complete sign in process
+        [Parameter(DontShow)]
+        $Timeout = 300
+    )
+    try {
+        $deviceCodeRequestParams = @{
+            Method = 'POST'
+            Uri    = "https://login.microsoftonline.com/$TenantID/oauth2/devicecode"
+            Body   = @{
+                resource  = $Resource
+                client_id = $ClientId
+                scope = "$Resource/Reports.Read"
+            }
         }
-        catch {
-            Write-Output "Azure CLI is required to run az-GraphFish. Press any key to continue (except the power button)"
-            Invoke-WebRequest -Uri https://aka.ms/installazurecliwindows -OutFile .\AzureCLI.msi; Start-Process msiexec.exe -Wait -ArgumentList '/I AzureCLI.msi /quiet'; Remove-Item .\AzureCLI.msi
+        $deviceCodeRequest = Invoke-RestMethod @deviceCodeRequestParams
+        Write-Host $deviceCodeRequest.message -ForegroundColor Yellow
+
+        $tokenRequestParams = @{
+            Method = 'POST'
+            Uri    = "https://login.microsoftonline.com/$TenantId/oauth2/token"
+            Body   = @{
+                grant_type = "urn:ietf:params:oauth:grant-type:device_code"
+                code       = $deviceCodeRequest.device_code
+                client_id  = $ClientId
+            }
+        }
+        $timeoutTimer = [System.Diagnostics.Stopwatch]::StartNew()
+        while ([string]::IsNullOrEmpty($_graphToken.access_token)) {
+            if ($timeoutTimer.Elapsed.TotalSeconds -gt ($deviceCodeRequest.expires_in)) {
+                throw 'Login timed out, please try again.'
+            }
+            $global:_graphToken = try {
+                Invoke-RestMethod @tokenRequestParams -ErrorAction Stop
+            }
+            catch {
+                $message = $_.ErrorDetails.Message | ConvertFrom-Json
+                if ($message.error -ne "authorization_pending") {
+                    throw
+                }
+            }
+            Start-Sleep -Seconds 1
         }
     }
-    Process {
+    finally {
         try {
-            # https://docs.microsoft.com/en-us/cli/azure/account?view=azure-cli-latest#az_account_get_access_token
-            if ($resource -eq "AzureAD") {
-                Write-Output "Grabbing Azure AD Token"
-                $_graphToken = (az account get-access-token --resource-type ms-graph | ConvertFrom-Json)
-            }
-            else {
-                Write-Output "Grabbing Azure Resource Token"
-                $_graphToken = (az account get-access-token | ConvertFrom-Json)
-            }
-
-            return $_graphToken
+            $timeoutTimer.Stop()
         }
         catch {
-            Write-Error $Error #"Unable to process graph token request"
+            # We don't care about errors here
         }
     }
 }
+
 function Get-Chunk($Coll, $Type, $Directory) {
 
     $Count = $Coll.Count
@@ -416,10 +448,10 @@ function Get-Chunk($Coll, $Type, $Directory) {
             $chunkarray = $Coll
         }
         else {
-            for($n=0; $n -lt $parts; $n++){
+            for ($n = 0; $n -lt $parts; $n++) {
                 $start = $n * $chunksize
-                $end = (($n+1)*$chunksize)-1
-                $chunkarray += ,@($coll[$start..$end])
+                $end = (($n + 1) * $chunksize) - 1
+                $chunkarray += , @($coll[$start..$end])
                 Write-Host $($chunkarray)
             }
             $Count = $chunkarray.Count
@@ -428,7 +460,7 @@ function Get-Chunk($Coll, $Type, $Directory) {
         $chunkcounter = 1
         $jsonout = ""
         ForEach ($chunk in $chunkarray) {
-            if ($Count -gt 0){
+            if ($Count -gt 0) {
                 Write-Output "Writing data block $chunkcounter of $Count"
             }
             $jsonout = ConvertTo-Json($chunk) -Depth 100
@@ -436,7 +468,8 @@ function Get-Chunk($Coll, $Type, $Directory) {
             $Stream.Write($jsonout)
             If ($chunkcounter -lt $Count) {
                 $Stream.WriteLine(",")
-            } Else {
+            }
+            Else {
                 $Stream.WriteLine("")
             }
             $Stream.Flush()
@@ -444,7 +477,8 @@ function Get-Chunk($Coll, $Type, $Directory) {
         }
         $Stream.WriteLine("`t]")
         $Stream.WriteLine("}")
-    } finally {
+    }
+    finally {
         $Stream.close()
     }
 }
@@ -469,60 +503,48 @@ function Start-GraphFish {
         ┃╭╮┃┃━━╋━━┫╰┻━┃┃┃╭╮┃╰╯┃┃┃┃┃  ┃┣━━┃┃┃┃
         ╰╯╰┻━━━╯  ╰━━━┻╯╰╯╰┫╭━┻╯╰┻╯  ╰┻━━┻╯╰╯
                            ┃┃
-                           ╰╯"
+                           ╰╯
+                           
+      -- L E T S   S T A R T   F I S H I N G --"
 
         $date = get-date -f yyyyMMddhhmmss
         $baseUrl = 'https://graph.microsoft.com/beta'
         $mngtUrl = 'https://management.azure.com'
         $outputDirectory = $(Get-Location)
 
-        try {
-            if ($null -ne $graphToken) {
-                [datetime]$expiresOn = $graphToken.expiresOn
-                $refresh = ($expiresOn - (get-date)).minutes
-            }
-            else {
-                $refresh = 0
-            }
-        }
-        catch {
-            $refresh = 0
-        }
-        if ($refresh -le 1) {
-            az login --use-device-code | Out-Null
-            $graphToken = Get-GraphToken -resource AzureAd #| ConvertTo-Json
-        }
+        Get-GraphToken
+        $scopes = ($_graphToken.scope) -split " " | Sort-Object
     }
     Process {
         Clear-Host
         Write-Host $logo -ForegroundColor White
-        Write-Output "      -- L E T S   S T A R T   F I S H I N G --"
 
-        #current context
-        $context = az account show | ConvertFrom-Json
-        Write-Output "`nCurrent Context:" $context
-        Write-Output "Token valid until:" $($graphToken.expiresOn)
+        $expiry = Get-Date -UnixTimeSeconds $($_graphToken.expires_on)
+        Write-Output "Token valid until: '$($expiry)'"
 
         #region Active Directory
         $aadRequestHeader = @{
-            "Token"          = ($graphToken.accessToken | ConvertTo-SecureString -AsPlainText -Force)
+            "Token"          = ($_graphToken.access_Token | ConvertTo-SecureString -AsPlainText -Force)
             "Authentication" = 'OAuth'
             "Method"         = 'GET'
         }
 
         Write-Output "Collecting RAW tenant data"
-        $organizations  = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/organization")
-        $users          = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/users")
-        $groups         = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/groups")
+        $organizations = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/organization")
+        $users = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/users")
+        $groups = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/groups")
         $directoryRoles = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/directoryRoles")
-        $applications   = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/applications")
-        $roleMembers    = (Get-Members -ArrayObject $directoryRoles -type azrolemembers)
+        $applications = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/applications")
+        $devices = (Get-GraphRecursive @aadRequestHeader -ur "$baseUrl/devices")
+
+        $roleMembers = (Get-Members -ArrayObject $directoryRoles -type azrolemembers)
 
         $organizations  | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-tenants.json"
         $users          | Get-Chunk -Coll $users -Directory $outputDirectory -type "users" #ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-users.json"
         $groups         | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-groups.json"
         $directoryRoles | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-directoryroles.json"
         $applications   | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-applications.json"
+        $devices        | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-devices.json"
 
         if ($hound) {
             Write-Output "Building AzureHound Export"
@@ -534,9 +556,9 @@ function Start-GraphFish {
         }
 
         Write-Output "Processing 'Role Assignments' "
-            Get-Chunk -Type "azglobaladminrights" -Directory $outputDirectory -coll ($roleMembers | Where-Object GroupName -eq "Global Administrator")
-            Get-Chunk -Type "azprivroleadminrights" -Directory $outputDirectory -coll ($roleMembers | Where-Object GroupName -eq "Privileged Role Administrator")
-            Get-Chunk -Type "azapplicationadmins" -Directory $outputDirectory -coll ($roleMembers | Where-Object GroupName -eq "Application Administrator")
+        Get-Chunk -Type "azglobaladminrights" -Directory $outputDirectory -coll ($roleMembers | Where-Object GroupName -eq "Global Administrator")
+        Get-Chunk -Type "azprivroleadminrights" -Directory $outputDirectory -coll ($roleMembers | Where-Object GroupName -eq "Privileged Role Administrator")
+        Get-Chunk -Type "azapplicationadmins" -Directory $outputDirectory -coll ($roleMembers | Where-Object GroupName -eq "Application Administrator")
 
 
         $groupsArray = @(
@@ -558,60 +580,15 @@ function Start-GraphFish {
         foreach ($app in $appsArray) {
             Get-Members -ArrayObject $applications -Type $app
         }
+
+        $deviceArray = @(
+            "registeredOwners"
+        )
         Get-PasswordResetRights
+        if ($scopes -contains "Reports.Read.All") {
+            $riskyUsers = Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/reports/credentialUserRegistrationDetails"
+            Get-Chunk -Coll $riskyUsers -Directory "$outputDirectory" -Type "azuserswithoutmfa"
+        }
     }
     End {}
 }
-
-#region Azure
-$subscriptions              = (Get-GraphRecursive @requestBody -api '2020-01-01' -Url "$mngtUrl/subscriptions")
-$subroles                   = (Get-GraphRecursive @requestBody -api '2018-07-01' -Url "$mngtUrl/subscriptions/$subId/providers/Microsoft.Authorization/roleDefinitions")
-$subRoleAssignments         = (Get-GraphRecursive @requestBody -api '2020-04-01-preview' -Url "$mngtUrl/subscriptions/$subId/providers/Microsoft.Authorization/roleAssignments")
-$customRoles                = $permissions.Properties | Where-Object type -ne 'BuiltInRole'
-
-$resourceGroups             = (Get-GraphRecursive @requestBody -api '2020-01-01' -Url "$mngtUrl/subscriptions/$subId/resourcegroups" )
-$rgRoleAssignments          = (Get-GraphRecursive @requestBody -api '2020-04-01-preview' -Url "$mngtUrl/subscriptions/$subId/resourceGroups/{resourceGroupName}/providers/Microsoft.Authorization/roleAssignments")
-$resourceRoleAssignments    = (Get-GraphRecursive @requestBody -api '2020-04-01-preview' -Url "$mngtUrl/subscriptions/$subId/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{parentResourcePath}/{resourceType}/{resourceName}/Microsoft.Authorization/roleAssignments")
-#endregion Azure
-
-#Current User Permissions
-$permissions = (Get-GraphRecursive -Url "$mngtUrl/subscriptions/$subId/resourcegroups/{resourceGroupName}/providers/Microsoft.Authorization/permissions" @requestBody -api '2018-07-01')
-
-foreach ($directoryRole in $directoryRoles) {
-    Write-Output "[Role: $($directoryRole.displayName)]"
-
-    $uri = "$baseUrl/directoryRoles/$($directoryRole.id)/members"
-    
-    $directoryRoleMembers = (Get-GraphRecursive -Url $uri @requestBody)
-    Write-Output $directoryRoleMembers | ConvertTo-Json -Depth 100 | Out-File .\outputs\$($directoryRole.id).json
-}
-
-$    = az account get-access-token | ConvertFrom-Json
-Write-Host "retrieved token" -ForegroundColor Green
-Write-Output $token
-# Get Azure Resource Groups
-$endpoint = "https://management.azure.com/subscriptions/$($token.subscription)/resourcegroups?api-version=2019-08-01"
-$headers = @{}
-$headers.Add("Authorization", "$("bearer") " + " " + "$($token.accesstoken)")
-$resourceGroups = Invoke-RestMethod -Method Get `
-    -Uri $endpoint `
-    -Headers $Headers
-Write-host "retrieved Resource groups" -ForegroundColor Green
-Write-Output $resourceGroups.value.name
-
-$baseUrl = 'https://management.azure.com'
-$subs = (Invoke-RestMethod -Uri "$baseUrl/subscriptions?api-version=2020-01-01" -Headers $headers).value
-
-foreach ($sub in $subs) {
-    $uri = "https://management.azure.com/subscriptions/$($sub.subscriptionId)/resourcegroups?api-version=2019-08-01"
-    (Invoke-RestMethod -Method Get `
-            -Uri $endpoint `
-            -Headers $Headers).value
-}
-
-Get-Assignments -ArrayObject $users @requestBody -objectType azusers
-
-
-(Invoke-RestMethod @requestBody -uri "$baseUrl/serviceprincipals?`$filter=appid eq '$applicationId'").value
-"https://graph.microsoft.com/beta/users/?`$filter=id eq '$($UserAccount)'&`$select=onPremisesDistinguishedName, displayName" `
-    -accessToken $accessToken)
