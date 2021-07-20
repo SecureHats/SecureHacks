@@ -6,7 +6,7 @@
 .EXAMPLE
    Get-GraphRecursive -Url 'https://graph.microsoft.com/v1.0/groups?$filter=isAssignableToRole eq true' -AccessToken $AccessToken
 .EXAMPLE
-   Get-GraphRecursive -Url "https://graph.microsoft.com/v1.0/groups/<guid>/members?`$select=id,displayName,userPrincipalName,onPremisesDistinguishedName,onPremisesImmutableId" -AccessToken $AccessToken
+   Get-GraphRecursive -Url "https://graph.microsoft.com/v1.0/groups/<guid>/members?`$select=id, displayName, userPrincipalName, onPremisesDistinguishedName, onPremisesImmutableId" -AccessToken $AccessToken
 #>
 function Get-GraphRecursive {
     [CmdletBinding()]
@@ -66,8 +66,9 @@ function Get-GraphRecursive {
     try {
         if ($result.'@odata.nextLink') {
             Get-GraphRecursive -Url $result.'@odata.nextLink' -method $method -Authentication $Authentication -token $token
+
             $resultCount = ($Result.value).count
-            if ($resultCount -gt 1000) {
+            if ($resultCount -gt 999) {
                 Write-Host "Processing $($resultCount) items"
             }
         }
@@ -180,7 +181,7 @@ function Get-Members {
     }
     else {
         foreach ($item in $ArrayObject) {
-            Write-Output "Processing item $($i) of $($ArrayObject.count)"
+            Write-Output "Processing item $($i) of $($ArrayObject.count) - '$($item.displayName)'"
             $i++
             Write-Verbose "[$($graph): $($item.displayName)]`n"
             if ($type -eq "azapplicationtosp") {
@@ -225,7 +226,7 @@ function Get-Members {
                             "$($userType)Type"     = (($account.'@odata.id' -split "\.")[-1])
                             "$($userType)OnPremID" = $account.OnPremisesSecurityIdentifier
                         }
-                        #Write-Verbose $currentItem
+                        Write-Verbose $currentItem
                         $null = $dataHash.Add($currentItem)
                     }
                 }
@@ -361,6 +362,13 @@ function Get-GraphToken {
         [Parameter(DontShow)]
         $Timeout = 300
     )
+
+        if ($_graphToken){
+            if($_graphToken.resource -ne 'https://graph.microsoft.com/'){ $_graphToken = ''}
+            if($_graphToken.clientID -ne '1950a258-227b-4e31-a9cf-717495945fc2'){ $_graphToken = ''}
+            if(($expiry - (get-date)).minutes -lt 5){ $_graphToken = ''}
+        }
+
     try {
         $deviceCodeRequestParams = @{
             Method = 'POST'
@@ -368,7 +376,7 @@ function Get-GraphToken {
             Body   = @{
                 resource  = $Resource
                 client_id = $ClientId
-                scope = "$Resource/Reports.Read"
+                #scope = "$Resource/Reports.Read"
             }
         }
         $deviceCodeRequest = Invoke-RestMethod @deviceCodeRequestParams
@@ -520,7 +528,7 @@ function Start-GraphFish {
         Write-Host $logo -ForegroundColor White
 
         $expiry = Get-Date -UnixTimeSeconds $($_graphToken.expires_on)
-        Write-Output "Token valid until: '$($expiry)'"
+        Write-Output "`nToken valid until: '$($expiry)'`n"
 
         #region Active Directory
         $aadRequestHeader = @{
@@ -530,21 +538,23 @@ function Start-GraphFish {
         }
 
         Write-Output "Collecting RAW tenant data"
-        $organizations = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/organization")
-        $users = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/users")
-        $groups = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/groups")
-        $directoryRoles = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/directoryRoles")
-        $applications = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/applications")
-        $devices = (Get-GraphRecursive @aadRequestHeader -ur "$baseUrl/devices")
+        $organizations      = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/organization")
+        $users              = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/users" -select "id, accountEnabled, businessPhones, city, createdDateTime, creationtype, companyName, country, department, displayname, employeeid, employeeType, givenName, imAddresses, jobTitle, mail, mailNickName, mobilePhone, onPremisesDistinguishedName, officeLocation, onPremisesDomainName, onPremisesImmutableId, onPremisesLastSyncDateTime, onPremisesSecurityIdentifier, onPremisesSamAccountName, onPremisesSyncEnabled, onPremisesUserPrincipalName, passwordPolicies, postalCode, state, streetAddress, surname, usageLocation, userPrincipalName, externalUserState, externalUserStateChangeDateTime, userType, identities, lastPasswordChangeDateTime")
+        $groups             = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/groups")
+        $directoryRoles     = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/directoryRoles")
+        $applications       = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/applications")
+        $devices            = (Get-GraphRecursive @aadRequestHeader -ur "$baseUrl/devices")
+        $serviceprincipals  = (Get-GraphRecursive @aadRequestHeader -ur "$baseUrl/serviceprincipals")
 
         $roleMembers = (Get-Members -ArrayObject $directoryRoles -type azrolemembers)
 
-        $organizations  | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-tenants.json"
-        $users          | Get-Chunk -Coll $users -Directory $outputDirectory -type "users" #ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-users.json"
-        $groups         | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-groups.json"
-        $directoryRoles | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-directoryroles.json"
-        $applications   | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-applications.json"
-        $devices        | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-devices.json"
+        $organizations      | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-tenants.json"
+        $users              | Get-Chunk -Coll $users -Directory $outputDirectory -type "users" #ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-users.json"
+        $groups             | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-groups.json"
+        $directoryRoles     | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-directoryroles.json"
+        $applications       | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-applications.json"
+        $devices            | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-devices.json"
+        $serviceprincipals  | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-serviceprincipals.json"
 
         if ($hound) {
             Write-Output "Building AzureHound Export"
