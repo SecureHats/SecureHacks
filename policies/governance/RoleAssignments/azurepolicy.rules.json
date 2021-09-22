@@ -1,0 +1,57 @@
+{
+    "if": {
+        "anyOf": [
+            {
+                "allOf": [
+                    {
+                        "field": "type",
+                        "equals": "Microsoft.Authorization/roleAssignments"
+                    },
+                    {
+                        "field": "Microsoft.Authorization/roleAssignments/roleDefinitionId",
+                        "contains": "[[parameters('ownerRoleDefId')]"
+                    },
+                    {
+                        "field": "Microsoft.Authorization/roleAssignments/principalId",
+                        "notEquals": "[[parameters('ownerGroupId')]"
+                    }
+                ]
+            },
+            {
+                "allOf": [
+                    {
+                        "field": "type",
+                        "equals": "Microsoft.Authorization/roleAssignments"
+                    },
+                    {
+                        "field": "Microsoft.Authorization/roleAssignments/roleDefinitionId",
+                        "contains": "[[parameters('contributorRoleDefId')]"
+                    },
+                    {
+                        "field": "Microsoft.Authorization/roleAssignments/principalId",
+                        "notEquals": "[[parameters('contributorGroupId')]"
+                    }
+                ]
+            },
+            {
+                "allOf": [
+                    {
+                        "field": "type",
+                        "equals": "Microsoft.Authorization/roleAssignments"
+                    },
+                    {
+                        "field": "Microsoft.Authorization/roleAssignments/roleDefinitionId",
+                        "contains": "[[parameters('userAccessAdminRoleDefId')]"
+                    },
+                    {
+                        "field": "Microsoft.Authorization/roleAssignments/principalId",
+                        "notEquals": "[[parameters('userAccessAdminGroupId')]"
+                    }
+                ]
+            }
+        ]
+    },
+    "then": {
+        "effect": "[[parameters('effect')]"
+    }
+}
