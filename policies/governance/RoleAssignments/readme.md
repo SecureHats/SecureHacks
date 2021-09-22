@@ -10,7 +10,26 @@ The Azure Policy is used to either audit or deny role assignments in the Azure R
 When assigning the policy to the selected scope the policy will evaluate if the desginated Azure AD Groups are used to assign role permissions.
 This can be useful in cases where privileged roles are directly assigned to identity objects other than groups.
 
-Because the Azure AD GroupId is used this solution is also compatible with Privileged Access Groups through PIM
+Because the Azure AD GroupId is used this solution is also compatible with _Privileged Access Groups_ through PIM
+
+## Deployment:
+
+### Try with PowerShell
+
+````powershell
+$definition = New-AzPolicyDefinition -Name "audit-role-assignments" -DisplayName "Audit Privileged Role Assignments" -description "Audit if privileged roles are only assigned to the allowed groups" -Policy 'https://raw.githubusercontent.com/SecureHats/SecureHacks/main/policies/governance/RoleAssignments/azurepolicy.rules.json' -Parameter 'https://raw.githubusercontent.com/SecureHats/SecureHacks/main/policies/governance/RoleAssignments/azurepolicy.parameters.json' -Mode All
+$definition
+$assignment = New-AzPolicyAssignment -Name <assignmentname> -Scope <scope>  -tagName <tagName> -PolicyDefinition $definition
+$assignment 
+````
+
+### Try with CLI
+
+````cli
+az policy definition create --name 'audit-role-assignments' --display-name 'Audit Privileged Role Assignments' --description 'Audit if privileged roles are only assigned to the allowed groups' --rules 'https://raw.githubusercontent.com/SecureHats/SecureHacks/main/policies/governance/RoleAssignments/azurepolicy.rules.json' --params 'https://raw.githubusercontent.com/SecureHats/SecureHacks/main/policies/governance/RoleAssignments/azurepolicy.parameters.json' --mode All
+
+az policy assignment create --name <assignmentname> --scope <scope> --policy "audit-role-assignments" 
+````
 
 ## Usage:
 
