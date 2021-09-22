@@ -1,11 +1,10 @@
 targetScope = 'subscription'
-var policyName = 'guid().guid'
 var policyDisplayName = 'Audit Privileged Role Assignments'
-var policyDescription = 'This policy is used to control Privileged Role Assignments'
+var policyDescription = 'Audit if privileged roles are only assigned to the allowed groups'
 var metadata = 'IAM'
 
 resource policy 'Microsoft.Authorization/policyDefinitions@2019-09-01' = {
-  name: policyName
+  name: 'audit-role-assignments'
   properties: {
     displayName: policyDisplayName
     policyType: 'Custom'
