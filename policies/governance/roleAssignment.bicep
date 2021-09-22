@@ -1,0 +1,132 @@
+targetScope = 'subscription'
+var policyName = 'guid().guid'
+var policyDisplayName = 'Audit Privileged Role Assignments'
+var policyDescription = 'This policy is used to control Privileged Role Assignments'
+var metadata = 'IAM'
+
+resource policy 'Microsoft.Authorization/policyDefinitions@2019-09-01' = {
+  name: policyName
+  properties: {
+    displayName: policyDisplayName
+    policyType: 'Custom'
+    description: policyDescription
+    metadata: metadata
+    mode: 'All'
+    parameters: {
+      ownerRoleDefId: {
+        type: 'String'
+        defaultValue: '8e3af657-a8ff-443c-a75c-2fe8c4bcb635'
+        metadata: {
+          description: 'Role Definition ID of the Owner Role'
+          displayName: 'Owner Role'
+        }
+      }
+      ownerGroupId: {
+        type: 'String'
+        metadata: {
+          description: 'ObjectId of a group in AAD'
+          displayName: 'Owner group objectId'
+        }
+      }
+      contributorRoleDefId: {
+        type: 'String'
+        defaultValue: 'b24988ac-6180-42a0-ab88-20f7382dd24c'
+        metadata: {
+          description: 'Role Definition ID of the Owner Role'
+          displayName: 'Owner Role'
+        }
+      }
+      contributorGroupId: {
+        type: 'String'
+        metadata: {
+          description: 'ObjectId of a group in AAD'
+          displayName: 'Contributor group objectId'
+        }
+      }
+      userAccessAdminRoleDefId: {
+        type: 'String'
+        defaultValue: '18d7d88d-d35e-4fb5-a5c3-7773c20a72d9'
+        metadata: {
+          description: 'Role Definition ID of the Owner Role'
+          displayName: 'Owner Role'
+        }
+      }
+      userAccessAdminGroupId: {
+        type: 'String'
+        metadata: {
+          description: 'ObjectId of a group in AAD'
+          displayName: 'User Access Administrator group objectId'
+        }
+      }
+      effect: {
+        type: 'String'
+        metadata: {
+          displayName: 'Effect'
+          description: 'Effect of this Azure Policy - Audit, Deny or Disabled'
+        }
+        allowedValues: [
+          'Audit'
+          'Deny'
+          'Disabled'
+        ]
+      }
+    }
+    policyRule: {
+      if: {
+        anyOf: [
+          {
+            allOf: [
+              {
+                field: 'type'
+                equals: 'Microsoft.Authorization/roleAssignments'
+              }
+              {
+                field: 'Microsoft.Authorization/roleAssignments/roleDefinitionId'
+                contains: '[parameters(\'ownerRoleDefId\')]'
+              }
+              {
+                field: 'Microsoft.Authorization/roleAssignments/principalId'
+                notEquals: '[parameters(\'ownerGroupId\')]'
+              }
+            ]
+          }
+          {
+            allOf: [
+              {
+                field: 'type'
+                equals: 'Microsoft.Authorization/roleAssignments'
+              }
+              {
+                field: 'Microsoft.Authorization/roleAssignments/roleDefinitionId'
+                contains: '[parameters(\'contributorRoleDefId\')]'
+              }
+              {
+                field: 'Microsoft.Authorization/roleAssignments/principalId'
+                notEquals: '[parameters(\'contributorGroupId\')]'
+              }
+            ]
+          }
+          {
+            allOf: [
+              {
+                field: 'type'
+                equals: 'Microsoft.Authorization/roleAssignments'
+              }
+              {
+                field: 'Microsoft.Authorization/roleAssignments/roleDefinitionId'
+                contains: '[parameters(\'userAccessAdminRoleDefId\')]'
+              }
+              {
+                field: 'Microsoft.Authorization/roleAssignments/principalId'
+                notEquals: '[parameters(\'userAccessAdminGroupId\')]'
+              }
+            ]
+          }
+        ]
+      }
+      then: {
+        effect: '[parameters(\'effect\')]'
+      }
+    }
+  }
+}
