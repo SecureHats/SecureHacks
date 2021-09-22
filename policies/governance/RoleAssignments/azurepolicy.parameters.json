@@ -1,0 +1,59 @@
+{
+    "ownerRoleDefId": {
+        "type": "String",
+        "defaultValue": "8e3af657-a8ff-443c-a75c-2fe8c4bcb635",
+        "metadata": {
+            "description": "Role Definition ID of the Owner Role",
+            "displayName": "Owner Role"
+        }
+    },
+    "contributorRoleDefId": {
+        "type": "String",
+        "defaultValue": "b24988ac-6180-42a0-ab88-20f7382dd24c",
+        "metadata": {
+            "description": "Role Definition ID of the Owner Role",
+            "displayName": "Owner Role"
+        }
+    },
+    "userAccessAdminRoleDefId": {
+        "type": "String",
+        "defaultValue": "18d7d88d-d35e-4fb5-a5c3-7773c20a72d9",
+        "metadata": {
+            "description": "Role Definition ID of the Owner Role",
+            "displayName": "Owner Role"
+        }
+    },
+    "ownerGroupId": {
+        "type": "String",
+        "metadata": {
+            "description": "ObjectId of a group in AAD",
+            "displayName": "Owner group objectId"
+        }
+    },
+    "contributorGroupId": {
+        "type": "String",
+        "metadata": {
+            "description": "ObjectId of a group in AAD",
+            "displayName": "Contributor group objectId"
+        }
+    },
+    "userAccessAdminGroupId": {
+        "type": "String",
+        "metadata": {
+            "description": "ObjectId of a group in AAD",
+            "displayName": "User Access Administrator group objectId"
+        }
+    },
+    "effect": {
+        "type": "String",
+        "metadata": {
+            "displayName": "Effect",
+            "description": "Effect of this Azure Policy - Audit, Deny or Disabled"
+        },
+        "allowedValues": [
+            "Audit",
+            "Deny",
+            "Disabled"
+        ]
+    }
+}
