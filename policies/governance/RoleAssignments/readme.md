@@ -4,7 +4,7 @@
 [![Maintenance](https://img.shields.io/maintenance/yes/2021.svg?style=flat-square)]()
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
 
-## Role Assignment Policy
+## Audit Privileged Role Assignments Policy
 
 The Azure Policy is used to either audit or deny role assignments in the Azure RBAC model.
 When assigning the policy to the selected scope the policy will evaluate if the desginated Azure AD Groups are used to assign role permissions.
