@@ -2,16 +2,15 @@
   "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "variables": {
-    "policyName": "guid().guid",
     "policyDisplayName": "Audit Privileged Role Assignments",
-    "policyDescription": "This policy is used to control Privileged Role Assignments",
+    "policyDescription": "Audit if privileged roles are only assigned to the allowed groups",
     "metadata": "IAM"
   },
   "resources": [
     {
       "type": "Microsoft.Authorization/policyDefinitions",
       "apiVersion": "2019-09-01",
-      "name": "[variables('policyName')]",
+      "name": "audit-role-assignments",
       "properties": {
         "displayName": "[variables('policyDisplayName')]",
         "policyType": "Custom",
