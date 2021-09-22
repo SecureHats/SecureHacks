@@ -3,10 +3,9 @@
     "apiVersion": "2019-09-01",
     "name": "audit-role-assignments",
     "properties": {
-        "displayName": "[variables('policyDisplayName')]",
+        "displayName": "Audit Privileged Role Assignments",
         "policyType": "Custom",
-        "description": "[variables('policyDescription')]",
-        "metadata": "[variables('metadata')]",
+        "description": "Audit if privileged roles are only assigned to the allowed groups",
         "mode": "All",
         "parameters": {
             "ownerRoleDefId": {
