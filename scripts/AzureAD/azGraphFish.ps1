@@ -586,20 +586,6 @@ function Start-GraphFish {
     End {}
 }
 
-#region Azure
-$subscriptions              = (Get-GraphRecursive @requestBody -api '2020-01-01' -Url "$mngtUrl/subscriptions")
-$subroles                   = (Get-GraphRecursive @requestBody -api '2018-07-01' -Url "$mngtUrl/subscriptions/$subId/providers/Microsoft.Authorization/roleDefinitions")
-$subRoleAssignments         = (Get-GraphRecursive @requestBody -api '2020-04-01-preview' -Url "$mngtUrl/subscriptions/$subId/providers/Microsoft.Authorization/roleAssignments")
-$customRoles                = $permissions.Properties | Where-Object type -ne 'BuiltInRole'
-
-$resourceGroups             = (Get-GraphRecursive @requestBody -api '2020-01-01' -Url "$mngtUrl/subscriptions/$subId/resourcegroups" )
-$rgRoleAssignments          = (Get-GraphRecursive @requestBody -api '2020-04-01-preview' -Url "$mngtUrl/subscriptions/$subId/resourceGroups/{resourceGroupName}/providers/Microsoft.Authorization/roleAssignments")
-$resourceRoleAssignments    = (Get-GraphRecursive @requestBody -api '2020-04-01-preview' -Url "$mngtUrl/subscriptions/$subId/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{parentResourcePath}/{resourceType}/{resourceName}/Microsoft.Authorization/roleAssignments")
-#endregion Azure
-
-#Current User Permissions
-$permissions = (Get-GraphRecursive -Url "$mngtUrl/subscriptions/$subId/resourcegroups/{resourceGroupName}/providers/Microsoft.Authorization/permissions" @requestBody -api '2018-07-01')
-
 foreach ($directoryRole in $directoryRoles) {
     Write-Output "[Role: $($directoryRole.displayName)]"
 
@@ -608,8 +594,8 @@ foreach ($directoryRole in $directoryRoles) {
     $directoryRoleMembers = (Get-GraphRecursive -Url $uri @requestBody)
     Write-Output $directoryRoleMembers | ConvertTo-Json -Depth 100 | Out-File .\outputs\$($directoryRole.id).json
 }
-
-$    = az account get-access-token | ConvertFrom-Json
+<#
+$account = az account get-access-token | ConvertFrom-Json
 Write-Host "retrieved token" -ForegroundColor Green
 Write-Output $token
 # Get Azure Resource Groups
@@ -638,3 +624,39 @@ Get-Assignments -ArrayObject $users @requestBody -objectType azusers
 (Invoke-RestMethod @requestBody -uri "$baseUrl/serviceprincipals?`$filter=appid eq '$applicationId'").value
 "https://graph.microsoft.com/beta/users/?`$filter=id eq '$($UserAccount)'&`$select=onPremisesDistinguishedName, displayName" `
     -accessToken $accessToken)
+
+#region Azure
+$subscriptions              = (Get-GraphRecursive @requestBody -api '2020-01-01' -Url "$mngtUrl/subscriptions")
+$subroles                   = (Get-GraphRecursive @requestBody -api '2018-07-01' -Url "$mngtUrl/subscriptions/$subId/providers/Microsoft.Authorization/roleDefinitions")
+$subRoleAssignments         = (Get-GraphRecursive @requestBody -api '2020-04-01-preview' -Url "$mngtUrl/subscriptions/$subId/providers/Microsoft.Authorization/roleAssignments")
+$customRoles                = $subroles.Properties | Where-Object type -ne 'BuiltInRole'
+
+$resourceGroups             = (Get-GraphRecursive @requestBody -api '2020-01-01' -Url "$mngtUrl/subscriptions/$subId/resourcegroups" )
+$rgRoleAssignments          = (Get-GraphRecursive @requestBody -api '2020-04-01-preview' -Url "$mngtUrl/subscriptions/$subId/resourceGroups/$resourceGroupName/providers/Microsoft.Authorization/roleAssignments")
+#$resourceRoleAssignments    = (Get-GraphRecursive @requestBody -api '2020-04-01-preview' -Url "$mngtUrl/subscriptions/$subId/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{parentResourcePath}/{resourceType}/{resourceName}/Microsoft.Authorization/roleAssignments")
+
+foreach ($subId in ($subscriptions.subscriptionId)) {
+    $subroles           = (Get-GraphRecursive @requestBody -api '2018-07-01' -Url "$mngtUrl/subscriptions/$subId/providers/Microsoft.Authorization/roleDefinitions")
+    $subRoleAssignments = (Get-GraphRecursive @requestBody -api '2020-04-01-preview' -Url "$mngtUrl/subscriptions/$subId/providers/Microsoft.Authorization/roleAssignments")
+    $resourceGroups     = (Get-GraphRecursive @requestBody -api '2020-01-01' -Url "$mngtUrl/subscriptions/$subId/resourcegroups" )
+    
+    $subroles           | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-$subId-subscriptionRoles.json"
+    $subRoleAssignments | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-$subId-subscriptionRoleAssignments.json"
+
+    foreach ($resourceGroupName in $($resourceGroups.name)) {
+        $rgRoleAssignments       = (Get-GraphRecursive @requestBody -api '2020-04-01-preview' -Url "$mngtUrl/subscriptions/$subId/resourceGroups/$resourceGroupName/providers/Microsoft.Authorization/roleAssignments")
+        #$resourceRoleAssignments = (Get-GraphRecursive @requestBody -api '2020-04-01-preview' -Url "$mngtUrl/subscriptions/$subId/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{parentResourcePath}/{resourceType}/{resourceName}/Microsoft.Authorization/roleAssignments")
+    
+        $rgRoleAssignments | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-$subId-$resourceGroupName-roleassignments.json"
+    }
+}
+
+$subscriptions  | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-$subId-subscriptions.json"
+$resourceGroups | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-$subId-resourceGroups.json"
+
+#Current User Permissions
+$permissions = (Get-GraphRecursive -Url "$mngtUrl/subscriptions/$subId/resourcegroups/$resourceGroup/providers/Microsoft.Authorization/permissions" @requestBody -api '2018-07-01')
+
+###################endregion
+Install-Module -Name Az.ResourceGraph
+#>
