@@ -46,15 +46,14 @@ function Get-GraphRecursive {
         [String] $Url
     )
 
-    #Write-Host "Fetching url $Url"
     if ($api) {
-        $url = '{0}?api-version={1}' -f $Url, $API
+        $url = '{0}?api-version={1}' -f $Url, $Api
         if ($filter) {
-            $url = '{0}/?filter={2}&api-version={1}' -f $Url, $API, $filter
+            $url = '{0}&`filter={1}' -f $Url, $filter
         }
     }
     if ($select) {
-        $url = '{0}?$select={1}' -f $url, "$select"
+        $url = '{0}&`$select={1}' -f $url, "$select"
     }
 
     $result = Invoke-RestMethod -Uri $Url -method $method -Authentication $Authentication -token $token -Verbose:$false
@@ -180,7 +179,7 @@ function Get-Members {
     }
     else {
         foreach ($item in $ArrayObject) {
-            Write-Output "Processing item $($i) of $($ArrayObject.count)"
+            Write-Host -nonewline "Processing item $($i) of $($ArrayObject.count)`r"
             $i++
             Write-Verbose "[$($graph): $($item.displayName)]`n"
             if ($type -eq "azapplicationtosp") {
@@ -326,7 +325,7 @@ function Get-PasswordResetRights {
                                 TargetUserId       = $account.MemberId
                                 TargetUserOnPremId = $account.MemberOnPremId
                             }
-                                $null = $dataHash.Add($currentItem)
+                            $null = $dataHash.Add($currentItem)
                         }
                     }
                 }
@@ -339,7 +338,7 @@ function Get-PasswordResetRights {
     $null = $json.add("data", ($dataHash | Sort-Object -unique -property Username, TargetUserName ))
 
     Get-Chunk -Coll $json -Directory $outputDirectory -Type "pwdresetrights"
-    $json| ConvertTo-Json | Out-File "$outputDirectory\$date-azpwdresetrights.json"
+    $json | ConvertTo-Json | Out-File "$outputDirectory\$date-azpwdresetrights.json"
 }
 function Get-GraphToken {
     [CmdletBinding()]
@@ -416,11 +415,11 @@ function Get-Chunk($Coll, $Type, $Directory) {
             $chunkarray = $Coll
         }
         else {
-            for($n=0; $n -lt $parts; $n++){
+            for ($n = 0; $n -lt $parts; $n++) {
                 $start = $n * $chunksize
-                $end = (($n+1)*$chunksize)-1
-                $chunkarray += ,@($coll[$start..$end])
-                Write-Host $($chunkarray)
+                $end = (($n + 1) * $chunksize) - 1
+                $chunkarray += , @($coll[$start..$end])
+                #Write-Host $($chunkarray)
             }
             $Count = $chunkarray.Count
         }
@@ -428,15 +427,16 @@ function Get-Chunk($Coll, $Type, $Directory) {
         $chunkcounter = 1
         $jsonout = ""
         ForEach ($chunk in $chunkarray) {
-            if ($Count -gt 0){
-                Write-Output "Writing data block $chunkcounter of $Count"
+            if ($Count -gt 0) {
+                Write-Host -nonewline "Writing data block $chunkcounter of $Count`r"
             }
             $jsonout = ConvertTo-Json($chunk) -Depth 100
             $jsonout = $jsonout.trimstart("[`r`n").trimend("`r`n]")
             $Stream.Write($jsonout)
             If ($chunkcounter -lt $Count) {
                 $Stream.WriteLine(",")
-            } Else {
+            }
+            Else {
                 $Stream.WriteLine("")
             }
             $Stream.Flush()
@@ -444,7 +444,8 @@ function Get-Chunk($Coll, $Type, $Directory) {
         }
         $Stream.WriteLine("`t]")
         $Stream.WriteLine("}")
-    } finally {
+    }
+    finally {
         $Stream.close()
     }
 }
@@ -454,12 +455,24 @@ function Start-GraphFish {
     param (
         [Parameter()]
         [bool]
-        $Hound
+        $Hound,
+
+        [Parameter()]
+        [string]$resourceType,
+
+        [Parameter()]
+        [string]$servicePrincipalId,
+
+        [Parameter()]
+        [string]$servicePrincipalKey,
+
+        [Parameter()]
+        [string]$tenantId
     )
 
     Begin {
         #Set-StrictMode -Version Latest
-        $ErrorActionPreference = 'Stop'
+        #$ErrorActionPreference = 'SilentlyContinue'
 
         $logo = "
                   ╭━━━╮       ╭╮ ╭━━━╮   ╭╮
@@ -489,8 +502,14 @@ function Start-GraphFish {
             $refresh = 0
         }
         if ($refresh -le 1) {
-            az login --use-device-code | Out-Null
-            $graphToken = Get-GraphToken -resource AzureAd #| ConvertTo-Json
+            if ($servicePrincipalId) {
+                az login --service-principal -u $servicePrincipalId -p $servicePrincipalKey --tenant $tenantId
+
+            }
+            else {
+                az login --use-device-code | Out-Null
+            }
+            $graphToken = Get-GraphToken -resource $resourceType #| ConvertTo-Json
         }
     }
     Process {
@@ -510,92 +529,99 @@ function Start-GraphFish {
             "Method"         = 'GET'
         }
 
+        if ($resourceType -eq 'AzureAd') {
+            Write-Output "Collecting RAW tenant data"
+            $organizations = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/organization")
+            $users = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/users")
+            $groups = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/groups")
+            $directoryRoles = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/directoryRoles")
+            $applications = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/applications")
+            $roleMembers = (Get-Members -ArrayObject $directoryRoles -type azrolemembers)
 
-        <#
-            {
-            "requests": [
-                {
-                    "id": "1",
-                    "method": "GET",
-                    "url": "/organization"
-                },
-                {
-                    "id": "2",
-                    "method": "GET",
-                    "url": "/users"
-                },
-                {
-                    "id": "3",
-                    "method": "GET",
-                    "url": "/groups"
-                }
-            ]
-        }
-        $resultList  = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/$batch")
-        #>
-        Write-Output "Collecting RAW tenant data"
-        $organizations  = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/organization")
-        $users          = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/users")
-        $groups         = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/groups")
-        $directoryRoles = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/directoryRoles")
-        $applications   = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/applications")
-        $roleMembers    = (Get-Members -ArrayObject $directoryRoles -type azrolemembers)
+            $organizations  | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-tenants.json"
+            $users          | Get-Chunk -Coll $users -Directory $outputDirectory -type "users"
+            $groups         | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-groups.json"
+            $directoryRoles | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-directoryroles.json"
+            $applications   | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-applications.json"
 
-        $organizations  | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-tenants.json"
-        $users          | Get-Chunk -Coll $users -Directory $outputDirectory -type "users" #ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-users.json"
-        $groups         | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-groups.json"
-        $directoryRoles | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-directoryroles.json"
-        $applications   | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-applications.json"
+            if ($hound) {
+                Write-Output "Building AzureHound Export"
+                export-data $organizations -type aztenants
+                export-data $users -type azusers
+                export-data $groups -type azgroups
+                export-data $directoryRoles -type azdirectoryroles
+                export-data $applications -type azapplicationowners
+            }
 
-        if ($hound) {
-            Write-Output "Building AzureHound Export"
-            export-data $organizations -type aztenants
-            export-data $users -type azusers
-            export-data $groups -type azgroups
-            export-data $directoryRoles -type azdirectoryroles
-            export-data $applications -type azapplicationowners
-        }
-
-        Write-Output "Processing 'Role Assignments' "
+            Write-Output "Processing 'Role Assignments' "
             Get-Chunk -Type "azglobaladminrights" -Directory $outputDirectory -coll ($roleMembers | Where-Object GroupName -eq "Global Administrator")
             Get-Chunk -Type "azprivroleadminrights" -Directory $outputDirectory -coll ($roleMembers | Where-Object GroupName -eq "Privileged Role Administrator")
             Get-Chunk -Type "azapplicationadmins" -Directory $outputDirectory -coll ($roleMembers | Where-Object GroupName -eq "Application Administrator")
 
+            $groupsArray = @(
+                "azgroupmembers"
+                "azgroupowners"
+            )
 
-        $groupsArray = @(
-            "azgroupmembers"
-            "azgroupowners"
-        )
+            Write-Output "Processing 'Groups Objects' "
+            foreach ($grp in $groupsArray) {
+                Get-Members -ArrayObject $groups -Type $grp
+            }
 
-        Write-Output "Processing 'Groups Objects' "
-        foreach ($grp in $groupsArray) {
-            Get-Members -ArrayObject $groups -Type $grp
+            $appsArray = @(
+                "azapplicationowners"
+                "azapplicationtosp"
+            )
+
+            Write-Output "Processing 'AAD Applications' "
+            foreach ($app in $appsArray) {
+                Get-Members -ArrayObject $applications -Type $app
+            }
+            Get-PasswordResetRights
         }
+        if ($resourceType -eq 'Azure') {
+            #region Azure
+            #$graphToken = Get-GraphToken -resource Azure
+            #$requestBody = @{
+            #    "Token"          = ($graphToken.accessToken | ConvertTo-SecureString -AsPlainText -Force)
+            #    "Authentication" = 'OAuth'
+            #    "Method"         = 'GET'
+            #}
 
-        $appsArray = @(
-            "azapplicationowners"
-            "azapplicationtosp"
-        )
+            $subscriptions = (Get-GraphRecursive @aadRequestHeader -api '2020-01-01' -Url "$mngtUrl/subscriptions")
+            foreach ($subid in $subscriptions.subscriptionId) {
+                $subroles = (Get-GraphRecursive @aadRequestHeader -api '2018-07-01' -Url "$mngtUrl/subscriptions/$subId/providers/Microsoft.Authorization/roleDefinitions")
+                $subRoleAssignments = (Get-GraphRecursive @aadRequestHeader -api '2020-04-01-preview' -Url "$mngtUrl/subscriptions/$subId/providers/Microsoft.Authorization/roleAssignments")
+                $customRoles = $subroles.Properties | Where-Object type -ne 'BuiltInRole'
 
-        Write-Output "Processing 'AAD Applications' "
-        foreach ($app in $appsArray) {
-            Get-Members -ArrayObject $applications -Type $app
+                ($subRoleAssignments | Where-Object { $_.properties.roledefinitionId -like '*8e3af657-a8ff-443c-a75c-2fe8c4bcb635*' }).properties | ConvertTo-CSV | out-file "$($subId)-owners.csv"
+                ($subRoleAssignments | Where-Object { $_.properties.roledefinitionId -like '*b24988ac-6180-42a0-ab88-20f7382dd24c*' }).properties | ConvertTo-CSV | out-file "$($subId)-contributors.csv"
+                ($subRoleAssignments | Where-Object { $_.properties.roledefinitionId -like '*18d7d88d-d35e-4fb5-a5c3-7773c20a72d9*' }).properties | ConvertTo-CSV | out-file "$($subId)-useraccessadmins.csv"
+                ($subRoleAssignments | Where-Object { $_.properties.roledefinitionId -like '*9980e02c-c2be-4d73-94e8-173b1dc7cf3c*' }).properties | ConvertTo-CSV | out-file "$($subId)-vmcontributors.csv"
+                ($subRoleAssignments | Where-Object { $_.properties.roledefinitionId -like '*00482a5a-887f-4fb3-b363-3b7fe8e74483*' }).properties | ConvertTo-CSV | out-file "$($subId)-kvAdmins.csv"
+                ($subRoleAssignments | Where-Object { $_.properties.roledefinitionId -like '*17d1049b-9a84-46fb-8f53-869881c3d3ab*' }).properties | ConvertTo-CSV | out-file "$($subId)-stgContributors.csv"
+                ($subRoleAssignments | Where-Object { $_.properties.roledefinitionId -like '*81a9662b-bebf-436f-a333-f67b29880f12*' }).properties | ConvertTo-CSV | out-file "$($subId)-stgKeyOperators.csv"
+            }
+            #endregion Azure
         }
-        Get-PasswordResetRights
     }
     End {}
 }
+
+
+#Current User Permissions
+$permissions = (Get-GraphRecursive -Url "$mngtUrl/subscriptions/$subId/resourcegroups/{resourceGroupName}/providers/Microsoft.Authorization/permissions" @requestBody -api '2018-07-01')
 
 foreach ($directoryRole in $directoryRoles) {
     Write-Output "[Role: $($directoryRole.displayName)]"
 
     $uri = "$baseUrl/directoryRoles/$($directoryRole.id)/members"
-    
+
     $directoryRoleMembers = (Get-GraphRecursive -Url $uri @requestBody)
     Write-Output $directoryRoleMembers | ConvertTo-Json -Depth 100 | Out-File .\outputs\$($directoryRole.id).json
 }
-<#
-$account = az account get-access-token | ConvertFrom-Json
+
+$    = az account get-access-token | ConvertFrom-Json
 Write-Host "retrieved token" -ForegroundColor Green
 Write-Output $token
 # Get Azure Resource Groups
@@ -614,8 +640,8 @@ $subs = (Invoke-RestMethod -Uri "$baseUrl/subscriptions?api-version=2020-01-01" 
 foreach ($sub in $subs) {
     $uri = "https://management.azure.com/subscriptions/$($sub.subscriptionId)/resourcegroups?api-version=2019-08-01"
     (Invoke-RestMethod -Method Get `
-            -Uri $endpoint `
-            -Headers $Headers).value
+        -Uri $endpoint `
+        -Headers $Headers).value
 }
 
 Get-Assignments -ArrayObject $users @requestBody -objectType azusers
@@ -624,39 +650,3 @@ Get-Assignments -ArrayObject $users @requestBody -objectType azusers
 (Invoke-RestMethod @requestBody -uri "$baseUrl/serviceprincipals?`$filter=appid eq '$applicationId'").value
 "https://graph.microsoft.com/beta/users/?`$filter=id eq '$($UserAccount)'&`$select=onPremisesDistinguishedName, displayName" `
     -accessToken $accessToken)
-
-#region Azure
-$subscriptions              = (Get-GraphRecursive @requestBody -api '2020-01-01' -Url "$mngtUrl/subscriptions")
-$subroles                   = (Get-GraphRecursive @requestBody -api '2018-07-01' -Url "$mngtUrl/subscriptions/$subId/providers/Microsoft.Authorization/roleDefinitions")
-$subRoleAssignments         = (Get-GraphRecursive @requestBody -api '2020-04-01-preview' -Url "$mngtUrl/subscriptions/$subId/providers/Microsoft.Authorization/roleAssignments")
-$customRoles                = $subroles.Properties | Where-Object type -ne 'BuiltInRole'
-
-$resourceGroups             = (Get-GraphRecursive @requestBody -api '2020-01-01' -Url "$mngtUrl/subscriptions/$subId/resourcegroups" )
-$rgRoleAssignments          = (Get-GraphRecursive @requestBody -api '2020-04-01-preview' -Url "$mngtUrl/subscriptions/$subId/resourceGroups/$resourceGroupName/providers/Microsoft.Authorization/roleAssignments")
-#$resourceRoleAssignments    = (Get-GraphRecursive @requestBody -api '2020-04-01-preview' -Url "$mngtUrl/subscriptions/$subId/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{parentResourcePath}/{resourceType}/{resourceName}/Microsoft.Authorization/roleAssignments")
-
-foreach ($subId in ($subscriptions.subscriptionId)) {
-    $subroles           = (Get-GraphRecursive @requestBody -api '2018-07-01' -Url "$mngtUrl/subscriptions/$subId/providers/Microsoft.Authorization/roleDefinitions")
-    $subRoleAssignments = (Get-GraphRecursive @requestBody -api '2020-04-01-preview' -Url "$mngtUrl/subscriptions/$subId/providers/Microsoft.Authorization/roleAssignments")
-    $resourceGroups     = (Get-GraphRecursive @requestBody -api '2020-01-01' -Url "$mngtUrl/subscriptions/$subId/resourcegroups" )
-    
-    $subroles           | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-$subId-subscriptionRoles.json"
-    $subRoleAssignments | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-$subId-subscriptionRoleAssignments.json"
-
-    foreach ($resourceGroupName in $($resourceGroups.name)) {
-        $rgRoleAssignments       = (Get-GraphRecursive @requestBody -api '2020-04-01-preview' -Url "$mngtUrl/subscriptions/$subId/resourceGroups/$resourceGroupName/providers/Microsoft.Authorization/roleAssignments")
-        #$resourceRoleAssignments = (Get-GraphRecursive @requestBody -api '2020-04-01-preview' -Url "$mngtUrl/subscriptions/$subId/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{parentResourcePath}/{resourceType}/{resourceName}/Microsoft.Authorization/roleAssignments")
-    
-        $rgRoleAssignments | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-$subId-$resourceGroupName-roleassignments.json"
-    }
-}
-
-$subscriptions  | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-$subId-subscriptions.json"
-$resourceGroups | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-$subId-resourceGroups.json"
-
-#Current User Permissions
-$permissions = (Get-GraphRecursive -Url "$mngtUrl/subscriptions/$subId/resourcegroups/$resourceGroup/providers/Microsoft.Authorization/permissions" @requestBody -api '2018-07-01')
-
-###################endregion
-Install-Module -Name Az.ResourceGraph
-#>
