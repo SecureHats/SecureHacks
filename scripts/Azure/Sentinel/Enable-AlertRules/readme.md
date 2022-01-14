@@ -39,7 +39,7 @@ Once the collection is build, the function will try to create a new detection ru
 
 > NOTE: The function will currently not validate if the detection rule already exists, causing duplication of rules when the function is run multiple times.
  
-  
+![image](https://user-images.githubusercontent.com/40334679/149479582-6abecccb-28e9-42a8-aa9f-dc851b1d59bf.png)
   
  ## Logging
  The logfile will be created in the user profile folder.
@@ -49,9 +49,14 @@ Once the collection is build, the function will try to create a new detection ru
  - Tactic
  - Technique
   
+  ![image](https://user-images.githubusercontent.com/40334679/149480053-670e2dde-3607-4329-937a-adcc71026787.png)
+  
 ## In Development
   
   - [ ] Logfile location parameter
   - [ ] Staging mode to only validate rules without creating
   - [ ] Gap analysis of detection rules
-  - [ ] Detect existing rules 
+  - [ ] Detect existing rules
+  - [ ] Reporting to Markdown file
+
+ > This function will later be a part of a PowerShell module.
