@@ -1,4 +1,4 @@
-ConnectorName, Product, Provider
+"ConnectorName", "DisplayName", "Provider"
 "AlsidForAD", "Alsid for Active Directory (Preview)", "Microsoft"
 "AWS", "Amazon Web Services", "Amazon"
 "AzureActiveDirectory", "Azure Active Directory", "Microsoft"
