@@ -1,7 +1,7 @@
 ConnectorName, Product, Provider
 "AlsidForAD", "Alsid for Active Directory (Preview)", "Microsoft"
 "AWS", "Amazon Web Services", "Amazon"
-"AzureActiveDirectory", " Azure Active Directory", "Microsoft"
+"AzureActiveDirectory", "Azure Active Directory", "Microsoft"
 "AzureActiveDirectoryIdentityProtection", "Azure Active Directory Identity Protection", ""
 "AzureActivity", "Azure Activity", "Microsoft"
 "AzureFirewall", "Azure Firewall", "Microsoft"
@@ -12,7 +12,7 @@ ConnectorName, Product, Provider
 "CiscoUmbrellaDataConnector", "Cisco Umbrella (Preview)", "Cisco"
 "CognniSentinelDataConnector", "Cognni (Preview)", "Cognni"
 "CyberpionSecurityLogs", "Cyberpion Security Logs (Preview)", "Cyberpion"
-"DNS", "DNS (Preview)", "Microsoft"
+"DNS", "DNS (Preview)", "", "Microsoft"
 "EsetSMC", "Eset Security Management Center (Preview)", "Eset"
 "F5", "F5 Networks", "F5 Networks" 
 "Fortinet", "Fortinet", "Fortinet"
