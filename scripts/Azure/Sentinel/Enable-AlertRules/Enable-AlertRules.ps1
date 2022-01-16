@@ -108,11 +108,11 @@ function Enable-AlertRules {
     $baseUri = "/subscriptions/${SubscriptionId}/resourceGroups/${ResourceGroupName}/providers/Microsoft.OperationalInsights/workspaces/${WorkspaceName}"
     $templatesUri = "$baseUri/providers/Microsoft.SecurityInsights/alertRuleTemplates$apiVersion"
     $alertUri = "$baseUri/providers/Microsoft.SecurityInsights/alertRules"
+    $alertRulesTemplates = @()
 
     if (-not($DataConnectors)) {
         $alertRulesTemplates = ((Invoke-AzRestMethod -Path "$($templatesUri)" -Method GET).Content | ConvertFrom-Json).value
-    }
-    else {
+    } else {
         $templates = ((Invoke-AzRestMethod -Path "$($templatesUri)" -Method GET).Content | ConvertFrom-Json).value
         foreach ($connector in $DataConnectors) {
             $alertRulesTemplates += ($templates | Where-Object { $_.Properties.RequiredDataConnectors.connectorId -contains $connector -and $_.kind -eq 'Scheduled' })
