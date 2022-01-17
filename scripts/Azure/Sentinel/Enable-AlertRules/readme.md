@@ -21,6 +21,31 @@ This will probably cause some errors due to missing tables in the Log Analytics 
 ### WorkspaceName
 - The name of the Log Analytics workspace
 
+## Options
+
+### UseWatchList
+- When the switch is set the default Microsoft Sentinel watchlist ```ActiveConnectors``` will be used.
+- This is done by setting the ```Enabled``` flag to ```TRUE``` in the watchlist.
+
+```powershell
+Enable-AlertRules `
+  -ResourceGroupName <Name of ResourceGroup> `
+  -WorkspaceName <Name of WorkSpace> `
+  -UseWatchList
+```
+  
+### WatchlistName
+- When using a custom watchlist the switch ```UseWatchlist``` needs to be set 
+- Use is ```watchlistname``` parameter to provide the name of the custom watchlist
+  
+```powershell
+Enable-AlertRules `
+  -ResourceGroupName <Name of ResourceGroup> `
+  -WorkspaceName <Name of Workspace> `
+  -UseWatchList `
+  -WatchlistName <myWatchlist>
+```
+  
 ### Dataconnectors
 - Name of the data connectors to create the detection rules for.
 - The DataConnectors has tab completion and can have multiple values.
@@ -31,6 +56,9 @@ Enable-AlertRules `
   -WorkspaceName <Name of WorkSpace> `
   -DataConnectors <Array of data connectors>
 ```
+  
+  
+
   
 ## Description
   
