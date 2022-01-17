@@ -11,9 +11,9 @@ To use this script, you have to loaded the function in PowerShell by dot sourcin
 
 ## Usage
 
-The function has 2 required parameters, and one optional parameter, which is recommended to use.
-When the <dataconnectors> parameter is left empty, all alert rules will be tried to create.
-This will probably cause some errors due to missing tables in the Log Analytics workspace
+The function has 2 required parameters, and 4 optional parameter.
+When the <dataconnectors> parameter is left empty or no watchlist is selected, all available alert rules will be tried to create.
+>NOTE This will probably cause some errors due to missing tables in the Log Analytics workspace.
 
 ### ResourceGroupName
 - The name of the resource group that contains the Log Analytics workspace
@@ -38,8 +38,9 @@ Enable-AlertRules `
   
 ### WatchlistName
   
-- The name of the custom watchlist
+- The name of a custom watchlist
 > When using a custom watchlist the switch ```-UseWatchlist``` needs to be set 
+>- An example for the watchlist can be found here: [ActiveConnectors.csv](https://raw.githubusercontent.com/SecureHats/SecureHacks/main/scripts/Azure/Sentinel/Enable-AlertRules/dataconnectors.csv)
 
 ```powershell
 Enable-AlertRules `
@@ -67,7 +68,7 @@ Enable-AlertRules `
 ### Dataconnectors
   
 - Name of the data connectors to create the detection rules for.
-- The DataConnectors has tab completion and can have multiple values.
+- The DataConnectors parameter has tab completion and can have multiple values.
 
 ```powershell
 Enable-AlertRules `
