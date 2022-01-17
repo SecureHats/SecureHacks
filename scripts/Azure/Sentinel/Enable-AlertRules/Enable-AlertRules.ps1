@@ -26,7 +26,7 @@ function Enable-AlertRules {
 
         [Parameter(Mandatory = $false,
             Position = 3)]
-        [switch]$WatchlistName = 'ActiveConnectors',
+        [string]$WatchlistName = "ActiveConnectors",
 
         [Parameter(Mandatory = $false,
             Position = 4)]
@@ -114,22 +114,23 @@ function Enable-AlertRules {
 
     $apiVersion = "?api-version=2021-10-01-preview"
     $baseUri = "/subscriptions/${SubscriptionId}/resourceGroups/${ResourceGroupName}/providers/Microsoft.OperationalInsights/workspaces/${WorkspaceName}"
-    $watchlist = "$baseUri/providers/Microsoft.SecurityInsights/watchlists/$WatchlistName/watchlistItems?$apiVersion"
+    $watchlist = "$baseUri/providers/Microsoft.SecurityInsights/watchlists/$WatchlistName/watchlistItems$apiVersion"
     $templatesUri = "$baseUri/providers/Microsoft.SecurityInsights/alertRuleTemplates$apiVersion"
     $alertUri = "$baseUri/providers/Microsoft.SecurityInsights/alertRules"
     $alertRulesTemplates = @()
 
     if ($UseWatchList) {
-        $_content = ((Invoke-AzRestMethod -Path "watchlist" -Method GET).content | ConvertFrom-Json).value
+        $_content = ((Invoke-AzRestMethod -Path "$watchlist" -Method GET).content | ConvertFrom-Json).value
         if (-not($_content)) {
-            Write-Output "Watchlist [$($WatchlistName)] could not be found"
+            Write-Error "Unable to find watchlist [$($watchlistName)] make sure it exists"
             break
         } else {
             $watchlistItems = $_content.properties.itemsKeyValue
-            $DataConnectors = $watchlistItems.connectorName | where enabled -eq "True"
+            $DataConnectors = ($watchlistItems | Where-Object Enabled -eq 'True').connectorName
         }
     }
     
+
     if (-not($DataConnectors)) {
         $alertRulesTemplates = ((Invoke-AzRestMethod -Path "$($templatesUri)" -Method GET).Content | ConvertFrom-Json).value
     } else {
