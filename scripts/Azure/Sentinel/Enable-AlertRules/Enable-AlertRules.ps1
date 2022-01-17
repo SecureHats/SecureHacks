@@ -21,7 +21,15 @@ function Enable-AlertRules {
         [string]$WorkspaceName,
 
         [Parameter(Mandatory = $false,
-            Position = 1)]
+            Position = 2)]
+        [switch]$UseWatchList,
+
+        [Parameter(Mandatory = $false,
+            Position = 3)]
+        [switch]$WatchlistName = 'ActiveConnectors'
+
+        [Parameter(Mandatory = $false,
+            Position = 4)]
         [ValidateSet("AlsidForAD",
             "AWS",
             "AzureActiveDirectory",
@@ -106,9 +114,17 @@ function Enable-AlertRules {
 
     $apiVersion = "?api-version=2021-10-01-preview"
     $baseUri = "/subscriptions/${SubscriptionId}/resourceGroups/${ResourceGroupName}/providers/Microsoft.OperationalInsights/workspaces/${WorkspaceName}"
+    $watchlist = "$baseUri/providers/Microsoft.SecurityInsights/watchlists/$WatchlistName/watchlistItems?$apiVersion"
     $templatesUri = "$baseUri/providers/Microsoft.SecurityInsights/alertRuleTemplates$apiVersion"
     $alertUri = "$baseUri/providers/Microsoft.SecurityInsights/alertRules"
     $alertRulesTemplates = @()
+
+    if ($UseWatchList -and ($DataConnectors -eq "") {
+        $_content = ((Invoke-AzRestMethod -Path "watchlist" -Method GET).content | ConvertFrom-Json).value
+        $watchlistItems = $_content.properties.itemsKeyValue
+        $DataConnectors = $watchlistItems.connectorName
+    }
+    
 
     if (-not($DataConnectors)) {
         $alertRulesTemplates = ((Invoke-AzRestMethod -Path "$($templatesUri)" -Method GET).Content | ConvertFrom-Json).value
