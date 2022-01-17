@@ -24,6 +24,7 @@ This will probably cause some errors due to missing tables in the Log Analytics 
 ## Options
 
 ### -UseWatchList
+  
 - When the switch is set the default Microsoft Sentinel watchlist ```ActiveConnectors``` will be used.
 - This is done by setting the ```Enabled``` flag to ```TRUE``` in the watchlist.
 > Before first use this watchlist needs to be created in Microsoft Sentinel [ActiveConnectors.csv](https://raw.githubusercontent.com/SecureHats/SecureHacks/main/scripts/Azure/Sentinel/Enable-AlertRules/dataconnectors.csv)
@@ -36,10 +37,10 @@ Enable-AlertRules `
 ```
   
 ### WatchlistName
+  
 - The name of the custom watchlist
 > When using a custom watchlist the switch ```-UseWatchlist``` needs to be set 
 
-  
 ```powershell
 Enable-AlertRules `
   -ResourceGroupName <Name of ResourceGroup> `
@@ -47,8 +48,24 @@ Enable-AlertRules `
   -UseWatchList `
   -WatchlistName <myWatchlist>
 ```
+
+### -Override
   
+- Create a duplicate analytics rule if it already exists.
+- The function will add the ```[COPY]``` tag to the *new* rule.
+> 
+```powershell
+Enable-AlertRules `
+  -ResourceGroupName <Name of ResourceGroup> `
+  -WorkspaceName <Name of Workspace> `
+  -UseWatchList `
+  -Override
+```
+  
+  ![image](https://user-images.githubusercontent.com/40334679/149841146-b1587335-7cc8-4114-b3c7-9e80c3037ae2.png)
+ 
 ### Dataconnectors
+  
 - Name of the data connectors to create the detection rules for.
 - The DataConnectors has tab completion and can have multiple values.
 
@@ -58,9 +75,6 @@ Enable-AlertRules `
   -WorkspaceName <Name of WorkSpace> `
   -DataConnectors <Array of data connectors>
 ```
-  
-  
-
   
 ## Description
   
@@ -86,7 +100,7 @@ Once the collection is build, the function will try to create a new detection ru
   - [ ] Logfile location parameter
   - [ ] Staging mode to only validate rules without creating
   - [ ] Gap analysis of detection rules
-  - [ ] Detect existing rules
+  - [x] Detect existing rules
   - [ ] Reporting to Markdown file
 
  > This function will later be a part of a PowerShell module.
