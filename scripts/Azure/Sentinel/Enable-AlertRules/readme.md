@@ -39,7 +39,6 @@ Enable-AlertRules `
 - The name of the custom watchlist
 > When using a custom watchlist the switch ```-UseWatchlist``` needs to be set 
 
-  
 ```powershell
 Enable-AlertRules `
   -ResourceGroupName <Name of ResourceGroup> `
@@ -47,6 +46,16 @@ Enable-AlertRules `
   -UseWatchList `
   -WatchlistName <myWatchlist>
 ```
+
+### -Override
+- Create a duplicate analytics rule if it already exists.
+- The function will add the ```[COPY]``` tag to the *new* rule
+
+Enable-AlertRules `
+  -ResourceGroupName <Name of ResourceGroup> `
+  -WorkspaceName <Name of Workspace> `
+  -UseWatchList `
+  -Override
   
 ### Dataconnectors
 - Name of the data connectors to create the detection rules for.
@@ -86,7 +95,7 @@ Once the collection is build, the function will try to create a new detection ru
   - [ ] Logfile location parameter
   - [ ] Staging mode to only validate rules without creating
   - [ ] Gap analysis of detection rules
-  - [ ] Detect existing rules
+  - [x] Detect existing rules
   - [ ] Reporting to Markdown file
 
  > This function will later be a part of a PowerShell module.
