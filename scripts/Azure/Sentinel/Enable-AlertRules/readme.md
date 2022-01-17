@@ -23,9 +23,10 @@ This will probably cause some errors due to missing tables in the Log Analytics 
 
 ## Options
 
-### UseWatchList
+### -UseWatchList
 - When the switch is set the default Microsoft Sentinel watchlist ```ActiveConnectors``` will be used.
 - This is done by setting the ```Enabled``` flag to ```TRUE``` in the watchlist.
+> Before first use this watchlist needs to be created in Microsoft Sentinel [ActiveConnectors.csv](https://raw.githubusercontent.com/SecureHats/SecureHacks/main/scripts/Azure/Sentinel/Enable-AlertRules/dataconnectors.csv)
 
 ```powershell
 Enable-AlertRules `
@@ -35,8 +36,9 @@ Enable-AlertRules `
 ```
   
 ### WatchlistName
-- When using a custom watchlist the switch ```UseWatchlist``` needs to be set 
-- Use is ```watchlistname``` parameter to provide the name of the custom watchlist
+- The name of the custom watchlist
+> When using a custom watchlist the switch ```-UseWatchlist``` needs to be set 
+
   
 ```powershell
 Enable-AlertRules `
