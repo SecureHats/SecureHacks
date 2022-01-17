@@ -26,54 +26,58 @@ function Enable-AlertRules {
 
         [Parameter(Mandatory = $false,
             Position = 3)]
-        [string]$WatchlistName = "ActiveConnectors",
+        [string]$WatchlistName = 'ActiveConnectors',
 
         [Parameter(Mandatory = $false,
             Position = 4)]
-        [ValidateSet("AlsidForAD",
-            "AWS",
-            "AzureActiveDirectory",
-            "AzureActiveDirectoryIdentityProtection",
-            "AzureActivity",
-            "AzureAdvancedThreatProtection",
-            "AzureFirewall",
-            "AzureInformationProtection",
-            "AzureMonitor",
-            "AzureSecurityCenter",
-            "CEF",
-            "CheckPoint",
-            "CiscoASA",
-            "CiscoUmbrellaDataConnector",
-            "CognniSentinelDataConnector",
-            "CyberpionSecurityLogs",
-            "DNS",
-            "EsetSMC",
-            "F5",
-            "Fortinet",
-            "InfobloxNIOS",
-            "IoT",
-            "MicrosoftCloudAppSecurity",
-            "MicrosoftDefenderAdvancedThreatProtection",
-            "MicrosoftThreatProtection",
-            "Office365",
-            "OfficeATP",
-            "OfficeIRM",
-            "PaloAltoNetworks",
-            "ProofpointPOD",
-            "PulseConnectSecure",
-            "QualysVulnerabilityManagement",
-            "SecurityEvents",
-            "SophosXGFirewall",
-            "SymantecProxySG",
-            "Syslog",
-            "ThreatIntelligence",
-            "ThreatIntelligenceTaxii",
-            "TrendMicroXDR",
-            "VMwareCarbonBlack",
-            "WAF",
-            "WindowsFirewall",
-            "WindowsSecurityEvents",
-            "Zscaler"
+        [switch]$Override,
+
+        [Parameter(Mandatory = $false,
+            Position = 5)]
+        [ValidateSet('AlsidForAD',
+            'AWS',
+            'AzureActiveDirectory',
+            'AzureActiveDirectoryIdentityProtection',
+            'AzureActivity',
+            'AzureAdvancedThreatProtection',
+            'AzureFirewall',
+            'AzureInformationProtection',
+            'AzureMonitor',
+            'AzureSecurityCenter',
+            'CEF',
+            'CheckPoint',
+            'CiscoASA',
+            'CiscoUmbrellaDataConnector',
+            'CognniSentinelDataConnector',
+            'CyberpionSecurityLogs',
+            'DNS',
+            'EsetSMC',
+            'F5',
+            'Fortinet',
+            'InfobloxNIOS',
+            'IoT',
+            'MicrosoftCloudAppSecurity',
+            'MicrosoftDefenderAdvancedThreatProtection',
+            'MicrosoftThreatProtection',
+            'Office365',
+            'OfficeATP',
+            'OfficeIRM',
+            'PaloAltoNetworks',
+            'ProofpointPOD',
+            'PulseConnectSecure',
+            'QualysVulnerabilityManagement',
+            'SecurityEvents',
+            'SophosXGFirewall',
+            'SymantecProxySG',
+            'Syslog',
+            'ThreatIntelligence',
+            'ThreatIntelligenceTaxii',
+            'TrendMicroXDR',
+            'VMwareCarbonBlack',
+            'WAF',
+            'WindowsFirewall',
+            'WindowsSecurityEvents',
+            'Zscaler'
         )]
         [array]$DataConnectors
     )
@@ -92,7 +96,7 @@ function Enable-AlertRules {
     }
 
     $SubscriptionId = $context.Subscription.Id
-    $logFile = '{0}\failed-rules-{1}.json' -f $($env:USERPROFILE), (get-date -f yyyyMMdd-hhmm)
+    $logFile = '{0}\failed-rules-{1}.json' -f $($env:USERPROFILE), (Get-Date -f yyyyMMdd-hhmm)
     $logo = "
      _____                           __  __      __
     / ___/___  _______  __________  / / / /___ _/ / ____
@@ -103,21 +107,22 @@ function Enable-AlertRules {
     Clear-Host
     Write-Host $logo -ForegroundColor White
     $_details = [ordered]@{
-        "Subscription Id"         = $($context.Subscription.id)
-        "Log Analytics workspace" = $($WorkspaceName)
-        "Data Connectors"         = $($DataConnectors)
-        "Logfile path"            = $($logFile)
+        'Subscription Id'         = $($context.Subscription.id)
+        'Log Analytics workspace' = $($WorkspaceName)
+        'Data Connectors'         = $($DataConnectors)
+        'Logfile path'            = $($logFile)
     }
 
     Write-Output $_details "`n`n"
     Write-Verbose ($_context | ConvertTo-Json)
 
-    $apiVersion = "?api-version=2021-10-01-preview"
+    $apiVersion = '?api-version=2021-10-01-preview'
     $baseUri = "/subscriptions/${SubscriptionId}/resourceGroups/${ResourceGroupName}/providers/Microsoft.OperationalInsights/workspaces/${WorkspaceName}"
     $watchlist = "$baseUri/providers/Microsoft.SecurityInsights/watchlists/$WatchlistName/watchlistItems$apiVersion"
     $templatesUri = "$baseUri/providers/Microsoft.SecurityInsights/alertRuleTemplates$apiVersion"
     $alertUri = "$baseUri/providers/Microsoft.SecurityInsights/alertRules"
     $alertRulesTemplates = @()
+    $i = 0
 
     if ($UseWatchList) {
         $_content = ((Invoke-AzRestMethod -Path "$watchlist" -Method GET).content | ConvertFrom-Json).value
@@ -126,10 +131,9 @@ function Enable-AlertRules {
             break
         } else {
             $watchlistItems = $_content.properties.itemsKeyValue
-            $DataConnectors = ($watchlistItems | Where-Object Enabled -eq 'True').connectorName
+            $DataConnectors = ($watchlistItems | Where-Object Enabled -EQ 'True').connectorName
         }
     }
-    
 
     if (-not($DataConnectors)) {
         $alertRulesTemplates = ((Invoke-AzRestMethod -Path "$($templatesUri)" -Method GET).Content | ConvertFrom-Json).value
@@ -148,61 +152,70 @@ function Enable-AlertRules {
             Write-Verbose "$($item.properties.displayName)"
             $alertUriGuid = $alertUri + '/' + $($alertName) + $apiVersion
             $i++
-            Write-Host "Processing $($i) of $($alertRulesTemplates.count) : $($item.properties.displayname)" -ForegroundColor Green
-            $properties = @{
-                queryFrequency        = $item.properties.queryFrequency
-                queryPeriod           = $item.properties.queryPeriod
-                triggerOperator       = $item.properties.triggerOperator
-                triggerThreshold      = $item.properties.triggerThreshold
-                severity              = $item.properties.severity
-                query                 = $item.properties.query
-                entityMappings        = $item.properties.entityMappings
-                templateVersion       = $item.properties.version
-                displayName           = $item.properties.displayName
-                description           = $item.properties.description
-                enabled               = $true
-                suppressionDuration   = 'PT5H'
-                suppressionEnabled    = $false
-                alertRuleTemplateName = $item.name
-            }
-
-            if ($item.properties.techniques) {
-                $properties.techniques = $item.properties.techniques
-            }
-            if ($item.properties.tactics) {
-                $properties.tactics = $item.properties.tactics
-            }
-
-            $alertBody = @{}
-            $alertBody | Add-Member -NotePropertyName kind -NotePropertyValue $item.kind -Force
-            $alertBody | Add-Member -NotePropertyName properties -NotePropertyValue $properties
-            try {
-                $result = Invoke-AzRestMethod -Path $alertUriGuid -Method PUT -Payload ($alertBody | ConvertTo-Json -Depth 10)
-
-                if ($result.statusCode -eq 400) {
-                    # if the existing built-in rule was not created from a template (old versions)
-                    if ((($result.Content | ConvertFrom-Json).error.message) -match 'already exists and was not created by a template') {
-                        Write-Verbose "Rule was not created from template, recreating rule"
-                        Invoke-AzRestMethod -Path $alertUriGuid -Method DELETE
-                        Invoke-AzRestMethod -Path $alertUriGuid -Method PUT -Payload ($alertBody | ConvertTo-Json -Depth 10)
-                    }
-                    else {
-                        Write-Host "Warning: "(($result.Content | ConvertFrom-Json).error.message) -ForegroundColor Red
-                        $currentItem = [PSCustomObject]@{
-                            'ruleName'  = $item.properties.displayNAme
-                            'tactic'    = $item.properties.tactics
-                            'technique' = $item.properties.techniques
-                            'error'     = (($result.Content | ConvertFrom-Json).error.message)
-                        }
-                        $currentItem | ConvertTo-Json | Out-File $logFile -Append
-                    }
+                Write-Host "Processing $($i) of $($alertRulesTemplates.count) : $($item.properties.displayname)" -ForegroundColor Green
+                $properties = @{
+                    queryFrequency        = $item.properties.queryFrequency
+                    queryPeriod           = $item.properties.queryPeriod
+                    triggerOperator       = $item.properties.triggerOperator
+                    triggerThreshold      = $item.properties.triggerThreshold
+                    severity              = $item.properties.severity
+                    query                 = $item.properties.query
+                    entityMappings        = $item.properties.entityMappings
+                    templateVersion       = $item.properties.version
+                    displayName           = $item.properties.displayName
+                    description           = $item.properties.description
+                    enabled               = $true
+                    suppressionDuration   = 'PT5H'
+                    suppressionEnabled    = $false
+                    alertRuleTemplateName = $item.name
                 }
+
+                if (-not($Override -and ($item.properties.alertRulesCreatedByTemplateCount -ne 0))) {
+                    $properties.displayName = $item.properties.displayName
+                } else {
+                    $properties.displayName = "[COPY] - $($item.properties.displayName)"
+                }
+
+                if ($item.properties.techniques) {
+                    $properties.techniques = $item.properties.techniques
+                }
+                if ($item.properties.tactics) {
+                    $properties.tactics = $item.properties.tactics
+                }
+
+                $alertBody = @{}
+                $alertBody | Add-Member -NotePropertyName kind -NotePropertyValue $item.kind -Force
+                $alertBody | Add-Member -NotePropertyName properties -NotePropertyValue $properties
+            if (-not($Override -or ($item.properties.alertRulesCreatedByTemplateCount -eq 0))) {
+                Write-Host 'ALERT: Schedules rule already exists. Use the [-Override] switch to create a duplicate rule.'
+                break
+            } else {
+                try {
+                    $result = Invoke-AzRestMethod -Path $alertUriGuid -Method PUT -Payload ($alertBody | ConvertTo-Json -Depth 10)
+
+                    if ($result.statusCode -eq 400) {
+                        # if the existing built-in rule was not created from a template (old versions)
+                        if ((($result.Content | ConvertFrom-Json).error.message) -match 'already exists and was not created by a template') {
+                            Write-Verbose 'Rule was not created from template, recreating rule'
+                            Invoke-AzRestMethod -Path $alertUriGuid -Method DELETE
+                            Invoke-AzRestMethod -Path $alertUriGuid -Method PUT -Payload ($alertBody | ConvertTo-Json -Depth 10)
+                        } else {
+                            Write-Host 'Warning: '(($result.Content | ConvertFrom-Json).error.message) -ForegroundColor Red
+                            $currentItem = [PSCustomObject]@{
+                                'ruleName'  = $item.properties.displayNAme
+                                'tactic'    = $item.properties.tactics
+                                'technique' = $item.properties.techniques
+                                'error'     = (($result.Content | ConvertFrom-Json).error.message)
+                            }
+                            $currentItem | ConvertTo-Json | Out-File $logFile -Append
+                        }
+                    }
+                } catch {
+                    Write-Verbose $_
+                    Write-Error "Unable to create alert rule with error code: $($_.Exception.Message)" -ErrorAction Stop
+                }
+                break
             }
-            catch {
-                Write-Verbose $_
-                Write-Error "Unable to create alert rule with error code: $($_.Exception.Message)" -ErrorAction Stop
-            }
-            break
         }
     }
 }
