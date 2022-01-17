@@ -4,8 +4,18 @@
 .DESCRIPTION
    This helper function updates the existing detection rules in the Microsoft Sentinel portal to match the latest version available in the Alert Templates Catalog
 .EXAMPLE
-   Update-DetectionRules -ResourceGroupName 'MyResourceGroup' -WorkspaceName 'MyWorkspace'
+   Enable-AlertRules -ResourceGroupName 'MyResourceGroup' -WorkspaceName 'MyWorkspace'
+.EXAMPLE
+   Enable alert rules based on the enabled items in the default watchlist (ActiveConnectors)
+   Enable-AlertRules -ResourceGroupName 'MyResourceGroup' -WorkspaceName 'MyWorkspace' -UseWatchList
+.EXAMPLE
+   Enable alert rules based on the enabled items in a specified watchlist
+   Enable-AlertRules -ResourceGroupName 'MyResourceGroup' -WorkspaceName 'MyWorkspace' -UseWatchList -WatchlistName 'MyWatchlist'
+.EXAMPLE
+   Enable alert rules based on an array with Data Connector names
+   Enable-AlertRules -ResourceGroupName 'MyResourceGroup' -WorkspaceName 'MyWorkspace' -DataConnectors AWS, AzureActiveDirectory
 #>
+
 function Enable-AlertRules {
     [CmdletBinding()]
     [Alias()]
@@ -26,7 +36,7 @@ function Enable-AlertRules {
 
         [Parameter(Mandatory = $false,
             Position = 3)]
-        [switch]$WatchlistName = 'ActiveConnectors'
+        [string]$WatchlistName = 'ActiveConnectors',
 
         [Parameter(Mandatory = $false,
             Position = 4)]
@@ -114,17 +124,18 @@ function Enable-AlertRules {
 
     $apiVersion = "?api-version=2021-10-01-preview"
     $baseUri = "/subscriptions/${SubscriptionId}/resourceGroups/${ResourceGroupName}/providers/Microsoft.OperationalInsights/workspaces/${WorkspaceName}"
-    $watchlist = "$baseUri/providers/Microsoft.SecurityInsights/watchlists/$WatchlistName/watchlistItems?$apiVersion"
+    $watchlist = "$baseUri/providers/Microsoft.SecurityInsights/watchlists/$WatchlistName/watchlistItems$apiVersion"
     $templatesUri = "$baseUri/providers/Microsoft.SecurityInsights/alertRuleTemplates$apiVersion"
     $alertUri = "$baseUri/providers/Microsoft.SecurityInsights/alertRules"
     $alertRulesTemplates = @()
+    $i = 0
 
-    if ($UseWatchList -and ($DataConnectors -eq "") {
-        $_content = ((Invoke-AzRestMethod -Path "watchlist" -Method GET).content | ConvertFrom-Json).value
+    if ($UseWatchList) {
+        Write-Output "Retrieving items from watchlist [$($WatchlistName)]"
+        $_content = ((Invoke-AzRestMethod -Path $watchlist -Method GET).content | ConvertFrom-Json).value
         $watchlistItems = $_content.properties.itemsKeyValue
-        $DataConnectors = $watchlistItems.connectorName
+        $DataConnectors = ($watchlistItems | Where-Object Enabled -eq "True").connectorName
     }
-    
 
     if (-not($DataConnectors)) {
         $alertRulesTemplates = ((Invoke-AzRestMethod -Path "$($templatesUri)" -Method GET).Content | ConvertFrom-Json).value
@@ -164,6 +175,7 @@ function Enable-AlertRules {
             if ($item.properties.techniques) {
                 $properties.techniques = $item.properties.techniques
             }
+            
             if ($item.properties.tactics) {
                 $properties.tactics = $item.properties.tactics
             }
@@ -180,8 +192,7 @@ function Enable-AlertRules {
                         Write-Verbose "Rule was not created from template, recreating rule"
                         Invoke-AzRestMethod -Path $alertUriGuid -Method DELETE
                         Invoke-AzRestMethod -Path $alertUriGuid -Method PUT -Payload ($alertBody | ConvertTo-Json -Depth 10)
-                    }
-                    else {
+                    } else {
                         Write-Host "Warning: "(($result.Content | ConvertFrom-Json).error.message) -ForegroundColor Red
                         $currentItem = [PSCustomObject]@{
                             'ruleName'  = $item.properties.displayNAme
@@ -192,8 +203,7 @@ function Enable-AlertRules {
                         $currentItem | ConvertTo-Json | Out-File $logFile -Append
                     }
                 }
-            }
-            catch {
+            } catch {
                 Write-Verbose $_
                 Write-Error "Unable to create alert rule with error code: $($_.Exception.Message)" -ErrorAction Stop
             }
