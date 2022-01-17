@@ -26,7 +26,7 @@ This will probably cause some errors due to missing tables in the Log Analytics 
 ### -UseWatchList
   
 - When the switch is set the default Microsoft Sentinel watchlist ```ActiveConnectors``` will be used.
-- This is done by setting the ```Enabled``` flag to ```TRUE``` in the watchlist.
+- The function will look for all connectors that has the ```Enabled``` flag set to ```TRUE``` in the watchlist.
 > Before first use this watchlist needs to be created in Microsoft Sentinel [ActiveConnectors.csv](https://raw.githubusercontent.com/SecureHats/SecureHacks/main/scripts/Azure/Sentinel/Enable-AlertRules/dataconnectors.csv)
 
 ```powershell
