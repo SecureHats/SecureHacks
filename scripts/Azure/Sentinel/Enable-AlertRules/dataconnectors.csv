@@ -1,41 +1,41 @@
-"ConnectorName", "DisplayName", "Provider"
-"AlsidForAD", "Alsid for Active Directory (Preview)", "Microsoft"
-"AWS", "Amazon Web Services", "Amazon"
-"AzureActiveDirectory", "Azure Active Directory", "Microsoft"
-"AzureActiveDirectoryIdentityProtection", "Azure Active Directory Identity Protection", "Microsoft"
-"AzureActivity", "Azure Activity", "Microsoft"
-"AzureFirewall", "Azure Firewall", "Microsoft"
-"AzureSecurityCenter", "Microsoft Defender for Cloud", "Microsoft"
-"CEF", "Common Event Format (CEF)", "Microsoft"
-"CheckPoint", "CheckPoint", "CheckPoint"
-"CiscoASA", "Cisco ASA", "Cisco"
-"CiscoUmbrellaDataConnector", "Cisco Umbrella (Preview)", "Cisco"
-"CognniSentinelDataConnector", "Cognni (Preview)", "Cognni"
-"CyberpionSecurityLogs", "Cyberpion Security Logs (Preview)", "Cyberpion"
-"DNS", "DNS (Preview)", "Microsoft"
-"EsetSMC", "Eset Security Management Center (Preview)", "Eset"
-"F5", "F5 Networks", "F5 Networks" 
-"Fortinet", "Fortinet", "Fortinet"
-"InfobloxNIOS", "Infoblox NIOS (Preview)", "Infoblox"
-"MicrosoftCloudAppSecurity", "Microsoft Defender for Cloud Apps", "Microsoft"
-"MicrosoftDefenderAdvancedThreatProtection", "Microsoft Defender for Endpoint", "Microsoft"
-"MicrosoftThreatProtection", "Microsoft 365 Defender (Preview)", "Microsoft"
-"Office365", "Office 365", "Microsoft"
-"OfficeATP","Microsoft Advanced Threat Protection","Microsoft"
-"OfficeIRM", "Azure Information Protection", "Microsoft"
-"PaloAltoNetworks", "Palo Alto Networks (Firewall)", "Palo Alto"
-"ProofpointPOD", "Proofpoint On Demand Email Security (Preview)", "Proofpoint"
-"PulseConnectSecure", "Pulse Connect Secure (Preview)", "Pulse Secure"
-"QualysVulnerabilityManagement", "Qualys Vulnerability Management (Preview)", "Qualys"
-"SecurityEvents", "Security Events via Legacy Agent", "Microsoft"
-"SophosXGFirewall", "Sophos XG Firewall (Preview)", "Sophos"
-"SymantecProxySG", "Symantec ProxySG (Preview)", "Symantec"
-"Syslog", "Syslog", "Microsoft"
-"ThreatIntelligence", "Threat Intelligence Platforms (Preview)", "Microsoft"
-"ThreatIntelligenceTaxii", "Threat intelligence - TAXII", "Microsoft"
-"TrendMicroXDR", "Trend Micro Vision One (Preview)", "Trend Micro"
-"VMwareCarbonBlack", "VMware Carbon Black Endpoint Standard (Preview)", "VMware"
-"WAF", "Azure Web Application Firewall (WAF)", "Microsoft"
-"WindowsFirewall", "Windows Firewall", "Microsoft"
-"WindowsSecurityEvents", "Windows Security Events via AMA", "Microsoft"
-"Zscaler", "Zscaler", "Zscaler"
+DisplayName,ConnectorName,Enabled,Provider
+Alsid for Active Directory (Preview),AlsidForAD,FALSE,Microsoft
+Amazon Web Services,AWS,FALSE,Amazon
+Azure Active Directory,AzureActiveDirectory,FALSE,Microsoft
+Azure Active Directory Identity Protection,AzureActiveDirectoryIdentityProtection,FALSE,Microsoft
+Azure Activity,AzureActivity,FALSE,Microsoft
+Azure Firewall,AzureFirewall,FALSE,Microsoft
+Azure Information Protection,OfficeIRM,FALSE,Microsoft
+Azure Web Application Firewall (WAF),WAF,FALSE,Microsoft
+CheckPoint,CheckPoint,FALSE,CheckPoint
+Cisco ASA,CiscoASA,FALSE,Cisco
+Cisco Umbrella (Preview),CiscoUmbrellaDataConnector,FALSE,Cisco
+Cognni (Preview),CognniSentinelDataConnector,FALSE,Cognni
+Common Event Format (CEF),CEF,FALSE,Microsoft
+Cyberpion Security Logs (Preview),CyberpionSecurityLogs,FALSE,Cyberpion
+DNS (Preview),DNS,FALSE,Microsoft
+Eset Security Management Center (Preview),EsetSMC,FALSE,Eset
+F5 Networks,F5,FALSE,F5 Networks 
+Fortinet,Fortinet,FALSE,Fortinet
+Infoblox NIOS (Preview),InfobloxNIOS,FALSE,Infoblox
+Microsoft Advanced Threat Protection,OfficeATP,FALSE,Microsoft
+Microsoft 365 Defender (Preview),MicrosoftThreatProtection,FALSE,Microsoft
+Microsoft Defender for Cloud,AzureSecurityCenter,FALSE,Microsoft
+Microsoft Defender for Cloud Apps,MicrosoftCloudAppSecurity,FALSE,Microsoft
+Microsoft Defender for Endpoint,MicrosoftDefenderAdvancedThreatProtection,FALSE,Microsoft
+Office 365,Office365,FALSE,Microsoft
+Palo Alto Networks (Firewall),PaloAltoNetworks,FALSE,Palo Alto
+Proofpoint On Demand Email Security (Preview),ProofpointPOD,FALSE,Proofpoint
+Pulse Connect Secure (Preview),PulseConnectSecure,FALSE,Pulse Secure
+Qualys Vulnerability Management (Preview),QualysVulnerabilityManagement,FALSE,Qualys
+Security Events via Legacy Agent,SecurityEvents,FALSE,Microsoft
+Sophos XG Firewall (Preview),SophosXGFirewall,FALSE,Sophos
+Symantec ProxySG (Preview),SymantecProxySG,FALSE,Symantec
+Syslog,Syslog,FALSE,Microsoft
+Threat intelligence - TAXII,ThreatIntelligenceTaxii,FALSE,Microsoft
+Threat Intelligence Platforms (Preview),ThreatIntelligence,FALSE,Microsoft
+Trend Micro Vision One (Preview),TrendMicroXDR,FALSE,Trend Micro
+VMware Carbon Black Endpoint Standard (Preview),VMwareCarbonBlack,FALSE,VMware
+Windows Firewall,WindowsFirewall,FALSE,Microsoft
+Windows Security Events via AMA,WindowsSecurityEvents,FALSE,Microsoft
+Zscaler,Zscaler,FALSE,Zscaler
