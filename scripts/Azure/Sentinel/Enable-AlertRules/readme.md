@@ -40,6 +40,7 @@ Enable-AlertRules `
   
 - The name of a custom watchlist
 > When using a custom watchlist the switch ```-UseWatchlist``` needs to be set 
+>- *NOTE:* This script will look for the _'Watchlist Alias'_ name.
 >- An example for the watchlist can be found here: [ActiveConnectors.csv](https://raw.githubusercontent.com/SecureHats/SecureHacks/main/scripts/Azure/Sentinel/Enable-AlertRules/dataconnectors.csv)
 
 ```powershell
