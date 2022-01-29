@@ -40,7 +40,8 @@ Enable-AlertRules `
   
 - The name of a custom watchlist
 > When using a custom watchlist the switch ```-UseWatchlist``` needs to be set 
->- *NOTE:* This script will look for the _'Watchlist Alias'_ name.
+>- *NOTE:* This script will look for the _**'Watchlist Alias'**_ name.
+>- The watchlist Alias is _**Case Sensitive**_ !
 >- An example for the watchlist can be found here: [ActiveConnectors.csv](https://raw.githubusercontent.com/SecureHats/SecureHacks/main/scripts/Azure/Sentinel/Enable-AlertRules/dataconnectors.csv)
 
 ```powershell
@@ -65,7 +66,20 @@ Enable-AlertRules `
 ```
   
   ![image](https://user-images.githubusercontent.com/40334679/149841146-b1587335-7cc8-4114-b3c7-9e80c3037ae2.png)
- 
+
+### -LogFilePath
+  
+- The folder path for creation of the logfile.
+- If the folder doesn't exist it will be created by the function
+> 
+```powershell
+Enable-AlertRules `
+  -ResourceGroupName <Name of ResourceGroup> `
+  -WorkspaceName <Name of Workspace> `
+  -UseWatchList `
+  -LogFilePath 'C:\ScriptTestPath'
+```
+
 ### Dataconnectors
   
 - Name of the data connectors to create the detection rules for.
@@ -85,7 +99,7 @@ Once the collection is build, the function will try to create a new detection ru
 
 > NOTE: The function will currently not validate if the detection rule already exists, causing duplication of rules when the function is run multiple times.
  
-![image](https://user-images.githubusercontent.com/40334679/149479582-6abecccb-28e9-42a8-aa9f-dc851b1d59bf.png)
+![image](https://user-images.githubusercontent.com/40334679/151666567-2ed8dd30-e311-4e6f-8cf9-e756d6bbbd27.png)
   
  ## Logging
  The logfile will be created in the user profile folder.
@@ -99,7 +113,7 @@ Once the collection is build, the function will try to create a new detection ru
   
 ## In Development
   
-  - [ ] Logfile location parameter
+  - [x] Logfile location parameter
   - [ ] Staging mode to only validate rules without creating
   - [ ] Gap analysis of detection rules
   - [x] Detect existing rules
