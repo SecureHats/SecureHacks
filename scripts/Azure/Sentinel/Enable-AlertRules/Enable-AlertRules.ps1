@@ -121,10 +121,8 @@ function Enable-AlertRules {
         $watchlist = '{0}/watchlists/{1}/watchlistItems{2}' -f $baseUri, $WatchlistName, $apiVersion
         $templatesUri = '{0}/alertRuleTemplates{1}' -f $baseUri, $apiVersion
         $alertUri = '{0}/alertRules' -f $baseUri
-    }
-    else {
+    } else {
         Write-Output "[-] Unable to retrieve log Analytics workspace"
-        exit
     }
 
     Write-Verbose ($_context | ConvertTo-Json)
