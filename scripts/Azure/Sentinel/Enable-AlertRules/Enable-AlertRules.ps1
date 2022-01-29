@@ -12,28 +12,22 @@ function Enable-AlertRules {
     Param
     (
         # Graph access token
-        [Parameter(Mandatory = $true,
-            Position = 0)]
+        [Parameter(Mandatory = $true, ValueFromPipeline=$true, Position = 0)]
         [string]$ResourceGroupName,
 
-        [Parameter(Mandatory = $true,
-            Position = 1)]
+        [Parameter(Mandatory = $true, ValueFromPipeline=$true, Position = 1)]
         [string]$WorkspaceName,
 
-        [Parameter(Mandatory = $false,
-            Position = 2)]
+        [Parameter(Mandatory = $false, ValueFromPipeline=$true, Position = 2)]
         [switch]$UseWatchList,
 
-        [Parameter(Mandatory = $false,
-            Position = 3)]
+        [Parameter(Mandatory = $false, ValueFromPipeline=$true, Position = 3)]
         [string]$WatchlistName = 'ActiveConnectors',
 
-        [Parameter(Mandatory = $false,
-            Position = 4)]
+        [Parameter(Mandatory = $false, ValueFromPipeline=$true, Position = 4)]
         [switch]$Override,
 
-        [Parameter(Mandatory = $false,
-            Position = 5)]
+        [Parameter(Mandatory = $false, ValueFromPipeline=$true, Position = 5)]
         [ValidateSet('AlsidForAD',
             'AWS',
             'AzureActiveDirectory',
@@ -144,15 +138,23 @@ function Enable-AlertRules {
         }
     }
 
-    Write-Output "$($alertRulesTemplates.count) Alert Rule Templates are found`n"
+    Write-Output "[+] Searching for duplicate rule templates"
+    $duplicateRules = ($alertRulesTemplates.properties.displayname | Group-Object | Where-Object {$_.Count -gt 1})
+    $uniqueRules = ($alertRulesTemplates.properties.displayname | Group-Object | Where-Object {$_.Count -eq 1})
+
+    if ($null -ne $duplicateRules) {
+        Write-Output "[+] Detected $($duplicateRules.count) duplicate rule templates"
+    }
+
+    Write-Output "[+] Processing $($uniqueRules.count) Alert Rule Templates`n"
 
     foreach ($item in $alertRulesTemplates) {
-        foreach ($alert in $alertRulesTemplates) {
+        foreach ($alert in $uniqueRules) {
             $alertName = (New-Guid).Guid
             Write-Verbose "$($item.properties.displayName)"
-            $alertUriGuid = $alertUri + '/' + $($alertName) + $apiVersion
+            $alertUriGuid = $alertUri + '/' + $($item.name) + $apiVersion
             $i++
-                Write-Host "Processing $($i) of $($alertRulesTemplates.count) : $($item.properties.displayname)" -ForegroundColor Green
+                Write-Host "[+] Processing $($i) of $($uniqueRules.count) : $($item.properties.displayname)" -ForegroundColor Green
                 $properties = @{
                     queryFrequency        = $item.properties.queryFrequency
                     queryPeriod           = $item.properties.queryPeriod
@@ -174,6 +176,7 @@ function Enable-AlertRules {
                     $properties.displayName = $item.properties.displayName
                 } else {
                     $properties.displayName = "[COPY] - $($item.properties.displayName)"
+                    $alertUriGuid = $alertUri + '/' + $($alertName) + $apiVersion
                 }
 
                 if ($item.properties.techniques) {
@@ -187,7 +190,7 @@ function Enable-AlertRules {
                 $alertBody | Add-Member -NotePropertyName kind -NotePropertyValue $item.kind -Force
                 $alertBody | Add-Member -NotePropertyName properties -NotePropertyValue $properties
             if (-not($Override -or ($item.properties.alertRulesCreatedByTemplateCount -eq 0))) {
-                Write-Host 'ALERT: Schedules rule already exists. Use the [-Override] switch to create a duplicate rule.'
+                Write-Host '[-] WARNING: Schedules rule already exists. Use the [-Override] switch to create a duplicate rule.' -ForegroundColor Yellow
                 break
             } else {
                 try {
@@ -218,4 +221,6 @@ function Enable-AlertRules {
             }
         }
     }
+    Write-Output "`n[+] Logfile created $($logFile)`n"
+    Write-Output "[+] Post any feature requests or issues on https://github.com/SecureHats/SecureHacks/issues`n"
 }
