@@ -102,7 +102,7 @@ Once the collection is build, the function will try to create a new detection ru
 
 > NOTE: The function will currently not validate if the detection rule already exists, causing duplication of rules when the function is run multiple times.
 
-![image](https://user-images.githubusercontent.com/40334679/149479582-6abecccb-28e9-42a8-aa9f-dc851b1d59bf.png)
+![image](https://user-images.githubusercontent.com/40334679/151690568-56ac4be0-d26a-4588-a435-102fab31182a.png)
 
  ## Logging
 
