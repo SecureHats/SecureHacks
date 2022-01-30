@@ -76,7 +76,7 @@ function Enable-AlertRules {
         [array]$DataConnectors,
 
         [Parameter(Mandatory = $false, ValueFromPipeline = $true, Position = 6)]
-        [string]$logFileLocation = $($env:USERPROFILE)
+        [string]$LogFileLocation = $($env:USERPROFILE)
     )
 
     $context = Get-AzContext
