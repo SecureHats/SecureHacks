@@ -1,0 +1,41 @@
+ConnectorName,DisplayName,Enabled,Provider
+AWS,Amazon Web Services,FALSE,Amazon
+CognniSentinelDataConnector,Cognni (Preview),FALSE,Cognni
+SecurityEvents,Security Events via Legacy Agent,TRUE,Microsoft
+EsetSMC,Eset Security Management Center (Preview),FALSE,Eset
+Office365,Office 365,TRUE,Microsoft
+AlsidForAD,Alsid for Active Directory (Preview),FALSE,Microsoft
+CiscoASA,Cisco ASA,FALSE,Cisco
+TrendMicroXDR,Trend Micro Vision One (Preview),FALSE,Trend Micro
+AzureFirewall,Azure Firewall,FALSE,Microsoft
+Zscaler,Zscaler,FALSE,Zscaler
+DNS,DNS (Preview),TRUE,Microsoft
+CEF,Common Event Format (CEF),FALSE,Microsoft
+ProofpointPOD,Proofpoint On Demand Email Security (Preview),FALSE,Proofpoint
+WindowsSecurityEvents,Windows Security Events via AMA,FALSE,Microsoft
+CiscoUmbrellaDataConnector,Cisco Umbrella (Preview),FALSE,Cisco
+PaloAltoNetworks,Palo Alto Networks (Firewall),FALSE,Palo Alto
+MicrosoftCloudAppSecurity,Microsoft Defender for Cloud Apps,FALSE,Microsoft
+SophosXGFirewall,Sophos XG Firewall (Preview),FALSE,Sophos
+WAF,Azure Web Application Firewall (WAF),FALSE,Microsoft
+CyberpionSecurityLogs,Cyberpion Security Logs (Preview),FALSE,Cyberpion
+QualysVulnerabilityManagement,Qualys Vulnerability Management (Preview),FALSE,Qualys
+ThreatIntelligence,Threat Intelligence Platforms (Preview),FALSE,Microsoft
+AzureActiveDirectory,Azure Active Directory,TRUE,Microsoft
+Fortinet,Fortinet,FALSE,Fortinet
+Syslog,Syslog,FALSE,Microsoft
+InfobloxNIOS,Infoblox NIOS (Preview),FALSE,Infoblox
+ThreatIntelligenceTaxii,Threat intelligence - TAXII,FALSE,Microsoft
+AzureActiveDirectoryIdentityProtection,Azure Active Directory Identity Protection,FALSE,Microsoft
+AzureActivity,Azure Activity,TRUE,Microsoft
+OfficeATP,Microsoft Advanced Threat Protection,FALSE,Microsoft
+MicrosoftDefenderAdvancedThreatProtection,Microsoft Defender for Endpoint,TRUE,Microsoft
+SymantecProxySG,Symantec ProxySG (Preview),FALSE,Symantec
+MicrosoftThreatProtection,Microsoft 365 Defender (Preview),FALSE,Microsoft
+PulseConnectSecure,Pulse Connect Secure (Preview),FALSE,Pulse Secure
+WindowsFirewall,Windows Firewall,FALSE,Microsoft
+F5,F5 Networks,FALSE,F5 Networks 
+OfficeIRM,Azure Information Protection,FALSE,Microsoft
+CheckPoint,CheckPoint,FALSE,CheckPoint
+AzureSecurityCenter,Microsoft Defender for Cloud,FALSE,Microsoft
+VMwareCarbonBlack,VMware Carbon Black Endpoint Standard (Preview),FALSE,VMware
