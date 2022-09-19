@@ -19,7 +19,7 @@ $logo = '
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠛⠓⠂⠀⠀⠀⠀⠀⠀⠀⠉⠉⠉⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀
 '
 Clear-Host
-Write-Host $logo -ForegroundColor Red
+Write-Host $logo -ForegroundColor Green
 Write-Output ""
 Write-Output "           -- L E T S   S T A R T   R A T T I N G --"
 Write-Output ""
@@ -56,7 +56,7 @@ if ($ThreatIntel) {
 
 if ($IDPS) {
     Write-Host "[+] Starting IDPS tests" -ForegroundColor Green
-    $userAgents = @('Mozilla/5.0', 'Mozilla/3.0', 'HaxerMen', 'InternetExplorer')
+    $userAgents = @('Mozilla/5.0', 'Mozilla/3.0', 'HaxerMen', 'InternetExplorer', 'xfilesreborn', 'M0zilla')
     foreach ($userAgent in $userAgents) {
         Write-Host "    [-] using Agent [$($userAgent)]...`r" -ForegroundColor Green
         $null = Invoke-RestMethod -Uri http://neverssl.com -UserAgent $userAgent
