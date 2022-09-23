@@ -77,11 +77,11 @@
                             },
                             {
                                 "field": "Microsoft.Authorization/roleAssignments/roleDefinitionId",
-                                "contains": "[[parameters('ownerRoleDefId')]"
+                                "contains": "[parameters('ownerRoleDefId')]"
                             },
                             {
                                 "field": "Microsoft.Authorization/roleAssignments/principalId",
-                                "notEquals": "[[parameters('ownerGroupId')]"
+                                "notEquals": "[parameters('ownerGroupId')]"
                             }
                         ]
                     },
@@ -93,11 +93,11 @@
                             },
                             {
                                 "field": "Microsoft.Authorization/roleAssignments/roleDefinitionId",
-                                "contains": "[[parameters('contributorRoleDefId')]"
+                                "contains": "[parameters('contributorRoleDefId')]"
                             },
                             {
                                 "field": "Microsoft.Authorization/roleAssignments/principalId",
-                                "notEquals": "[[parameters('contributorGroupId')]"
+                                "notEquals": "[parameters('contributorGroupId')]"
                             }
                         ]
                     },
@@ -109,18 +109,18 @@
                             },
                             {
                                 "field": "Microsoft.Authorization/roleAssignments/roleDefinitionId",
-                                "contains": "[[parameters('userAccessAdminRoleDefId')]"
+                                "contains": "[parameters('userAccessAdminRoleDefId')]"
                             },
                             {
                                 "field": "Microsoft.Authorization/roleAssignments/principalId",
-                                "notEquals": "[[parameters('userAccessAdminGroupId')]"
+                                "notEquals": "[parameters('userAccessAdminGroupId')]"
                             }
                         ]
                     }
                 ]
             },
             "then": {
-                "effect": "[[parameters('effect')]"
+                "effect": "[parameters('effect')]"
             }
         }
     }
