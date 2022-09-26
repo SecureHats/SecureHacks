@@ -118,6 +118,6 @@ try {
 }
 catch {
     Write-Verbose $_
-    Write-Error "Unable to create warchlist with error code: $($_.Exception.Message)" -ErrorAction Stop
+    Write-Error "Unable to create watchlist with error code: $($_.Exception.Message)" -ErrorAction Stop
 }
 Write-Output "[+] Post any feature requests or issues on https://github.com/SecureHats/SecureHacks/issues`n"
