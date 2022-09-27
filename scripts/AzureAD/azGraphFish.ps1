@@ -609,44 +609,44 @@ function Start-GraphFish {
 }
 
 
-#Current User Permissions
-$permissions = (Get-GraphRecursive -Url "$mngtUrl/subscriptions/$subId/resourcegroups/{resourceGroupName}/providers/Microsoft.Authorization/permissions" @requestBody -api '2018-07-01')
+# #Current User Permissions
+# $permissions = (Get-GraphRecursive -Url "$mngtUrl/subscriptions/$subId/resourcegroups/{resourceGroupName}/providers/Microsoft.Authorization/permissions" @requestBody -api '2018-07-01')
 
-foreach ($directoryRole in $directoryRoles) {
-    Write-Output "[Role: $($directoryRole.displayName)]"
+# foreach ($directoryRole in $directoryRoles) {
+#     Write-Output "[Role: $($directoryRole.displayName)]"
 
-    $uri = "$baseUrl/directoryRoles/$($directoryRole.id)/members"
+#     $uri = "$baseUrl/directoryRoles/$($directoryRole.id)/members"
 
-    $directoryRoleMembers = (Get-GraphRecursive -Url $uri @requestBody)
-    Write-Output $directoryRoleMembers | ConvertTo-Json -Depth 100 | Out-File .\outputs\$($directoryRole.id).json
-}
+#     $directoryRoleMembers = (Get-GraphRecursive -Url $uri @requestBody)
+#     Write-Output $directoryRoleMembers | ConvertTo-Json -Depth 100 | Out-File .\outputs\$($directoryRole.id).json
+# }
 
-$    = az account get-access-token | ConvertFrom-Json
-Write-Host "retrieved token" -ForegroundColor Green
-Write-Output $token
-# Get Azure Resource Groups
-$endpoint = "https://management.azure.com/subscriptions/$($token.subscription)/resourcegroups?api-version=2019-08-01"
-$headers = @{}
-$headers.Add("Authorization", "$("bearer") " + " " + "$($token.accesstoken)")
-$resourceGroups = Invoke-RestMethod -Method Get `
-    -Uri $endpoint `
-    -Headers $Headers
-Write-host "retrieved Resource groups" -ForegroundColor Green
-Write-Output $resourceGroups.value.name
+# $    = az account get-access-token | ConvertFrom-Json
+# Write-Host "retrieved token" -ForegroundColor Green
+# Write-Output $token
+# # Get Azure Resource Groups
+# $endpoint = "https://management.azure.com/subscriptions/$($token.subscription)/resourcegroups?api-version=2019-08-01"
+# $headers = @{}
+# $headers.Add("Authorization", "$("bearer") " + " " + "$($token.accesstoken)")
+# $resourceGroups = Invoke-RestMethod -Method Get `
+#     -Uri $endpoint `
+#     -Headers $Headers
+# Write-host "retrieved Resource groups" -ForegroundColor Green
+# Write-Output $resourceGroups.value.name
 
-$baseUrl = 'https://management.azure.com'
-$subs = (Invoke-RestMethod -Uri "$baseUrl/subscriptions?api-version=2020-01-01" -Headers $headers).value
+# $baseUrl = 'https://management.azure.com'
+# $subs = (Invoke-RestMethod -Uri "$baseUrl/subscriptions?api-version=2020-01-01" -Headers $headers).value
 
-foreach ($sub in $subs) {
-    $uri = "https://management.azure.com/subscriptions/$($sub.subscriptionId)/resourcegroups?api-version=2019-08-01"
-    (Invoke-RestMethod -Method Get `
-        -Uri $endpoint `
-        -Headers $Headers).value
-}
+# foreach ($sub in $subs) {
+#     $uri = "https://management.azure.com/subscriptions/$($sub.subscriptionId)/resourcegroups?api-version=2019-08-01"
+#     (Invoke-RestMethod -Method Get `
+#         -Uri $endpoint `
+#         -Headers $Headers).value
+# }
 
-Get-Assignments -ArrayObject $users @requestBody -objectType azusers
+# Get-Assignments -ArrayObject $users @requestBody -objectType azusers
 
 
-(Invoke-RestMethod @requestBody -uri "$baseUrl/serviceprincipals?`$filter=appid eq '$applicationId'").value
-"https://graph.microsoft.com/beta/users/?`$filter=id eq '$($UserAccount)'&`$select=onPremisesDistinguishedName, displayName" `
-    -accessToken $accessToken)
+# (Invoke-RestMethod @requestBody -uri "$baseUrl/serviceprincipals?`$filter=appid eq '$applicationId'").value
+# "https://graph.microsoft.com/beta/users/?`$filter=id eq '$($UserAccount)'&`$select=onPremisesDistinguishedName, displayName" `
+#     -accessToken $accessToken)
