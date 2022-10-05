@@ -1,7 +1,7 @@
 ![logo](./media/sh-banners.png)
 =========
 [![GitHub release](https://img.shields.io/github/release/SecureHats/Sentinel-playground.svg?style=flat-square)](https://github.com/SecureHats/SecureHacks/releases)
-[![Maintenance](https://img.shields.io/maintenance/yes/2021.svg?style=flat-square)]()
+[![Maintenance](https://img.shields.io/maintenance/yes/2022.svg?style=flat-square)]()
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
 
 # SecureHacks
