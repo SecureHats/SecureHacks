@@ -507,9 +507,9 @@ function Start-GraphFish {
 
             }
             else {
-                az login --use-device-code | Out-Null
+                az login --use-device-code --allow-no-subscription | Out-Null
             }
-            $graphToken = Get-GraphToken -resource $resourceType #| ConvertTo-Json
+            $graphToken = Get-GraphToken -resource $resourceType
         }
     }
     Process {
