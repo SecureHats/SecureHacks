@@ -58,13 +58,13 @@ if ($ThreatIntel) {
 
 if ($IDPS) {
     Write-Host "[+] Starting IDPS tests" -ForegroundColor Green
-    $userAgents = @('Mozilla/3.0', 'HaxerMen',, 'xfilesreborn', 'M0zilla')
+    $userAgents = @('Mozilla/3.0', 'HaxerMen', 'xfilesreborn', 'M0zilla')
     foreach ($userAgent in $userAgents) {
         Write-Host "    [-] using Agent [$($userAgent)]...`r" -ForegroundColor Green
         $null = Invoke-RestMethod -Uri http://neverssl.com -UserAgent $userAgent
     }
     
-    $null = Invoke-RestMethod -Uri 'https://rb.gy/nnxklz'
+   # $null = Invoke-RestMethod -Uri 'https://rb.gy/nnxklz'
     
     Write-Host
     Write-Host "All done! Check your SIEM for alerts using the timestamps [$(Get-Date)]" -ForegroundColor Green
