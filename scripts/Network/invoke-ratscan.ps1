@@ -30,7 +30,6 @@ $logo = '
                 -- L E T S   S T A R T   R A T T I N G --
 '
 
-
 Clear-Host
 Write-Host $logo -ForegroundColor Green
 Write-Output ""
@@ -72,6 +71,8 @@ if ($IDPS) {
         Write-Host "    [-] using Agent [$($userAgent)]...`r" -ForegroundColor Green
         $null = Invoke-RestMethod -Uri http://neverssl.com -UserAgent $userAgent
     }
+    
+   # $null = Invoke-RestMethod -Uri 'https://rb.gy/nnxklz'
     
     Write-Host
     Write-Host "All done! Check your SIEM for alerts using the timestamps [$(Get-Date)]" -ForegroundColor Green
