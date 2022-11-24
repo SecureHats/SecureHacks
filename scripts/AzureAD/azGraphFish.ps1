@@ -18,7 +18,7 @@ function Get-GraphRecursive {
         [Parameter(Mandatory = $false)]
         [string]$Filter,
         
-        [ParameterMandatory = $false)]
+        [Parameter(Mandatory = $false)]
         [string]$Select,
 
         [Parameter(Mandatory = $true)]
@@ -33,7 +33,7 @@ function Get-GraphRecursive {
         )
     
     if ($Filter) {
-        $uri = '{0}?`$Filter={1}' -f $Url, $Filter
+        $uri = '{0}?$Filter={1}' -f $Url, $Filter
         #$Uri = "https://graph.microsoft.com/beta/reports/authenticationMethods/userRegistrationDetails?`$Filter=isAdmin eq true&userType eq member"
     } else {
         $uri = $Url
@@ -43,19 +43,20 @@ function Get-GraphRecursive {
          if ($uri) {
             $url = '{0}&$select={1}' -f $uri, "$select"
          } else {
-            $uri = '{0}?`$select={1}' -f $url, "$select"
+            $uri = '{0}?$select={1}' -f $url, "$select"
          }
     }
 
     $apiResponse = Invoke-RestMethod -Uri $uri @aadRequestHeader
 
-    $count       = 0
-    $apiResult      = $apiResponse.value 
-    $userNextLink   = $apiResponse."@odata.nextLink"
+    $count        = 0
+    $apiResult    = $apiResponse.value 
+    $userNextLink = $apiResponse."@odata.nextLink"
 
     while ($null -ne $userNextLink) {
         $apiResponse    = (Invoke-RestMethod -uri $userNextLink @aadRequestHeader)
         $count = $count + ($apiResponse.value).count
+        
         Write-Host "[+] Processed objects $($count)"`r -NoNewline
         $userNextLink   = $apiResponse."@odata.nextLink"
         $apiResult      += $apiResponse.value
