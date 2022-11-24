@@ -13,7 +13,7 @@ function Get-GraphRecursive {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
-        [string]$BaseUri,
+        [string]$Url,
 
         [Parameter(Mandatory = $false)]
         [string]$Filter,
@@ -30,10 +30,10 @@ function Get-GraphRecursive {
         )
     
     if ($Filter) {
-        $uri = '{0}?`$Filter={1}' -f $BaseUri, $Filter
+        $uri = '{0}?`$Filter={1}' -f $Url, $Filter
         #$Uri = "https://graph.microsoft.com/beta/reports/authenticationMethods/userRegistrationDetails?`$Filter=isAdmin eq true&userType eq member"
     } else {
-        $uri = $BaseUri
+        $uri = $Url
     }
 
     $apiResponse = Invoke-RestMethod -Uri $uri @aadRequestHeader
