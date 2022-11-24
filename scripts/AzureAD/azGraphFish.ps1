@@ -18,8 +18,8 @@ function Get-GraphRecursive {
         [Parameter(Mandatory = $false)]
         [string]$Filter,
         
-        [Parameter(Manadatory = $false)]
-        [string]$Select
+        [ParameterMandatory = $false)]
+        [string]$Select,
 
         [Parameter(Mandatory = $true)]
         [securestring]$Token,
