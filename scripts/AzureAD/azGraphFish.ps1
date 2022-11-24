@@ -8,75 +8,120 @@
 .EXAMPLE
    Get-GraphRecursive -Url "https://graph.microsoft.com/v1.0/groups/<guid>/members?`$select=id,displayName,userPrincipalName,onPremisesDistinguishedName,onPremisesImmutableId" -AccessToken $AccessToken
 #>
+
 function Get-GraphRecursive {
     [CmdletBinding()]
-    [Alias()]
-    Param
-    (
-        [Parameter(Mandatory = $true,
-            Position = 0)]
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$BaseUri,
+
+        [Parameter(Mandatory = $false)]
+        [string]$Filter,
+
+        [Parameter(Mandatory = $true)]
         [securestring]$Token,
 
-        # Graph access token
-        [Parameter(Mandatory = $false,
-            Position = 1)]
-        [string]$Method,
+        [Parameter(Mandatory = $true)]
+        [string]$Method = 'GET',
 
-        # Graph access token
-        [Parameter(Mandatory = $false,
-            Position = 2)]
-        [string]$Api,
-
-        [Parameter(Mandatory = $true,
-            Position = 3)]
-        [string]$Authentication,
-
-        [Parameter(Mandatory = $false,
-            Position = 4)]
-        [string]$filter,
-
-        [Parameter(Mandatory = $false,
-            Position = 5)]
-        [string]$select,
-
-        # Graph url
-        [Parameter(Mandatory = $true,
-            ValueFromPipeline = $true,
-            Position = 6)]
-        [String] $Url
-    )
-
-    if ($api) {
-        $url = '{0}?api-version={1}' -f $Url, $Api
-        
-    }
-    if ($filter) {
-        $url = '{0}?$Filter={1}' -f $Url, $filter
-        #https://graph.microsoft.com/beta/users?`$Filter=UserType eq 'Guest'
-    }
-    if ($select) {
-        $url = '{0}&$select={1}' -f $url, "$select"
+        [Parameter(Mandatory = $true)]
+        [string]$Authentication = 'OAuth'
+    
+        )
+    
+    if ($Filter) {
+        $uri = '{0}?`$Filter={1}' -f $BaseUri, $Filter
+        #$Uri = "https://graph.microsoft.com/beta/reports/authenticationMethods/userRegistrationDetails?`$Filter=isAdmin eq true&userType eq member"
+    } else {
+        $uri = $BaseUri
     }
 
-    $result = Invoke-RestMethod -Uri $Url -method $method -Authentication $Authentication -token $token -Verbose:$false
-    if ($result.value) {
-        $Result.value
+    $apiResponse = Invoke-RestMethod -Uri $uri @aadRequestHeader
+
+    $count       = 0
+    $apiResult      = $apiResponse.value 
+    $userNextLink   = $apiResponse."@odata.nextLink"
+
+    while ($null -ne $userNextLink) {
+        $apiResponse    = (Invoke-RestMethod -uri $userNextLink @aadRequestHeader)
+        $count = $count + ($apiResponse.value).count
+        Write-Host "[+] Processed objects $($count)"`r -NoNewline
+        $userNextLink   = $apiResponse."@odata.nextLink"
+        $apiResult      += $apiResponse.value
     }
 
-    # Calls itself when there is a nextlink, in order to get next page
-    try {
-        if ($result.'@odata.nextLink') {
-            Get-GraphRecursive -Url $result.'@odata.nextLink' -method $method -Authentication $Authentication -token $token
-            $resultCount = ($Result.value).count
-            if ($resultCount -gt 1000) {
-                Write-Host "Processing $($resultCount) items"
-            }
-        }
-    }
-    catch {
-        # Nothing to process
-    }
+    return $apiResult
 }
+
+# function Get-GraphRecursive {
+#     [CmdletBinding()]
+#     [Alias()]
+#     Param
+#     (
+#         [Parameter(Mandatory = $true,
+#             Position = 0)]
+#         [securestring]$Token,
+
+#         # Graph access token
+#         [Parameter(Mandatory = $false,
+#             Position = 1)]
+#         [string]$Method,
+
+#         # Graph access token
+#         [Parameter(Mandatory = $false,
+#             Position = 2)]
+#         [string]$Api,
+
+#         [Parameter(Mandatory = $true,
+#             Position = 3)]
+#         [string]$Authentication,
+
+#         [Parameter(Mandatory = $false,
+#             Position = 4)]
+#         [string]$filter,
+
+#         [Parameter(Mandatory = $false,
+#             Position = 5)]
+#         [string]$select,
+
+#         # Graph url
+#         [Parameter(Mandatory = $true,
+#             ValueFromPipeline = $true,
+#             Position = 6)]
+#         [String] $Url
+#     )
+
+#     if ($api) {
+#         $url = '{0}?api-version={1}' -f $Url, $Api
+        
+#     }
+#     if ($filter) {
+#         $url = '{0}?$Filter={1}' -f $Url, $filter
+#         #https://graph.microsoft.com/beta/users?`$Filter=UserType eq 'Guest'
+#     }
+#     if ($select) {
+#         $url = '{0}&$select={1}' -f $url, "$select"
+#     }
+
+#     $result = Invoke-RestMethod -Uri $Url -method $method -Authentication $Authentication -token $token -Verbose:$false
+#     if ($result.value) {
+#         $Result.value
+#     }
+
+#     # Calls itself when there is a nextlink, in order to get next page
+#     try {
+#         if ($result.'@odata.nextLink') {
+#             Get-GraphRecursive -Url $result.'@odata.nextLink' -method $method -Authentication $Authentication -token $token
+#             $resultCount = ($Result.value).count
+#             if ($resultCount -gt 1000) {
+#                 Write-Host "Processing $($resultCount) items"
+#             }
+#         }
+#     }
+#     catch {
+#         # Nothing to process
+#     }
+# }
 
 function Get-Members {
     [CmdletBinding()]
