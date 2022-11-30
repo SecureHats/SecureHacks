@@ -65,76 +65,6 @@ function Get-GraphRecursive {
     return $apiResult
 }
 
-# function Get-GraphRecursive {
-#     [CmdletBinding()]
-#     [Alias()]
-#     Param
-#     (
-#         [Parameter(Mandatory = $true,
-#             Position = 0)]
-#         [securestring]$Token,
-
-#         # Graph access token
-#         [Parameter(Mandatory = $false,
-#             Position = 1)]
-#         [string]$Method,
-
-#         # Graph access token
-#         [Parameter(Mandatory = $false,
-#             Position = 2)]
-#         [string]$Api,
-
-#         [Parameter(Mandatory = $true,
-#             Position = 3)]
-#         [string]$Authentication,
-
-#         [Parameter(Mandatory = $false,
-#             Position = 4)]
-#         [string]$filter,
-
-#         [Parameter(Mandatory = $false,
-#             Position = 5)]
-#         [string]$select,
-
-#         # Graph url
-#         [Parameter(Mandatory = $true,
-#             ValueFromPipeline = $true,
-#             Position = 6)]
-#         [String] $Url
-#     )
-
-#     if ($api) {
-#         $url = '{0}?api-version={1}' -f $Url, $Api
-        
-#     }
-#     if ($filter) {
-#         $url = '{0}?$Filter={1}' -f $Url, $filter
-#         #https://graph.microsoft.com/beta/users?`$Filter=UserType eq 'Guest'
-#     }
-#     if ($select) {
-#         $url = '{0}&$select={1}' -f $url, "$select"
-#     }
-
-#     $result = Invoke-RestMethod -Uri $Url -method $method -Authentication $Authentication -token $token -Verbose:$false
-#     if ($result.value) {
-#         $Result.value
-#     }
-
-#     # Calls itself when there is a nextlink, in order to get next page
-#     try {
-#         if ($result.'@odata.nextLink') {
-#             Get-GraphRecursive -Url $result.'@odata.nextLink' -method $method -Authentication $Authentication -token $token
-#             $resultCount = ($Result.value).count
-#             if ($resultCount -gt 1000) {
-#                 Write-Host "Processing $($resultCount) items"
-#             }
-#         }
-#     }
-#     catch {
-#         # Nothing to process
-#     }
-# }
-
 function Get-Members {
     [CmdletBinding()]
     [Alias()]
@@ -461,7 +391,11 @@ function Get-AdminDetails {
     foreach ($account in ($roleMembers | Where-Object GroupName -like "*Admin*")) {
     
         try {
-            $adminUser = Invoke-RestMethod -uri "$baseUrl/users/$($account.memberID)?select=id, displayName, userPrincipalName, jobTitle, accountEnabled, createdDateTime, lastPasswordChangeDateTime, passwordProfile, passwordPolicies" @aadRequestHeader
+            $uri = "$baseUrl/users/$($account.memberID)?select=id, displayName, userPrincipalName, jobTitle, accountEnabled, createdDateTime, lastPasswordChangeDateTime, passwordProfile, passwordPolicies"
+            
+            if ($signInActivity) { $uri = "$baseUrl/users/$($account.memberID)?select=id, displayName, userPrincipalName, jobTitle, accountEnabled, createdDateTime, lastPasswordChangeDateTime, passwordProfile, passwordPolicies, signInActivity"}
+            
+            $adminUser = Invoke-RestMethod -uri $uri @aadRequestHeader
         
             $currentItem = [PSCustomObject]@{
             accountEnabled             = $adminUser.accountEnabled
@@ -474,7 +408,7 @@ function Get-AdminDetails {
             lastPasswordChangeInDays   = ($adminUser.lastPasswordChangeDateTime - (Get-Date)).days
             passwordProfile            = $adminUser.passwordProfile
             passwordPolicies           = $adminUser.passwordPolicies
-            signInActivity              = $adminUser.signInActivity
+            signInActivity              = $adminUser.signInActivity.lastSignInDateTime
             
         }
         $null = $dataHash.Add($currentItem)
@@ -494,42 +428,87 @@ function Get-AdminDetails {
 }
 
 function Get-GraphToken {
-    [CmdletBinding()]
-    [OutputType([string])]
-    param (
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
-        [ValidateSet('AzureAd', 'Azure', 'Monitor')]
-        [string]$resource
+    [cmdletbinding()]
+    Param(
+        [Parameter(Mandatory = $True)]
+        [String[]]
+        [ValidateSet("MSGraph", "Azure", "Monitor")]
+        $Client,    
+        [Parameter(Mandatory = $False)]
+        [String]
+        $Resource = "https://graph.microsoft.com"
+        
     )
-
-    Begin {
-        try {
-            az version | out-Null
+    
+    switch ($Client) {
+        "MSGraph" {
+            $body = @{
+                "client_id" = "d3590ed6-52b3-4102-aeff-aad2292ab01c"
+                "resource"  = "https://graph.microsoft.com/"
+            }
         }
-        catch {
-            Write-Output "Azure CLI is required to run az-GraphFish. Press any key to continue (except the power button)"
-            Invoke-WebRequest -Uri https://aka.ms/installazurecliwindows -OutFile .\AzureCLI.msi; Start-Process msiexec.exe -Wait -ArgumentList '/I AzureCLI.msi /quiet'; Remove-Item .\AzureCLI.msi
+        "Azure" {
+            $body = @{
+                "client_id" = "d3590ed6-52b3-4102-aeff-aad2292ab01c"
+                "resource"  = "https://management.core.windows.net"
+            }
+        }
+        "Monitor" {
+            $body = @{
+                "client_id" = "d3590ed6-52b3-4102-aeff-aad2292ab01c"
+                "resource"  = "https://monitor.azure.com/"
+                "scope" = [System.Web.HttpUtility]::UrlEncode("https://monitor.azure.com//.default")
+            }
         }
     }
-    Process {
-        try {
-            # https://docs.microsoft.com/en-us/cli/azure/account?view=azure-cli-latest#az_account_get_access_token
-            if ($resource -eq "AzureAD") {
-                Write-Output "Grabbing Azure AD Token"
-                $_graphToken = (az account get-access-token --resource-type ms-graph | ConvertFrom-Json)
-            }
-            else {
-                Write-Output "Grabbing Azure Resource Token"
-                $_graphToken = (az account get-access-token | ConvertFrom-Json)
-            }
 
-            return $_graphToken
+    # Login Process
+    $authResponse = Invoke-RestMethod `
+        -UseBasicParsing `
+        -Method Post `
+        -Uri "https://login.microsoftonline.com/common/oauth2/devicecode?api-version=1.0" `
+        -Body $body
+    
+    Write-Output $authResponse.message
+    $continue = $true
+    
+    $body = @{
+        "client_id"  = "d3590ed6-52b3-4102-aeff-aad2292ab01c"
+        "grant_type" = "urn:ietf:params:oauth:grant-type:device_code"
+        "code"       = $authResponse.device_code
+    }
+    while ($continue) {
+        Start-Sleep -Seconds $authResponse.interval
+        $total += $authResponse.interval
+
+        if ($total -gt ($authResponse.expires_in)) {
+            Write-Error "Timeout occurred"
+            return
+        }          
+        try {
+            $global:graphToken = Invoke-RestMethod `
+                -UseBasicParsing `
+                -Method Post `
+                -Uri "https://login.microsoftonline.com/Common/oauth2/token?api-version=1.0 " `
+                -Body $body `
+                -ErrorAction SilentlyContinue
         }
         catch {
-            Write-Error $Error #"Unable to process graph token request"
+            $details = $_.ErrorDetails.Message | ConvertFrom-Json
+            $continue = $details.error -eq "authorization_pending"
+            Write-Output "Waiting for approval: $($continue)"
+
+            if (!$continue) {
+                Write-Error $details.error_description
+                return
+            }
+        }
+        if($graphToken) {
+            break
         }
     }
 }
+
 function Get-Chunk($Coll, $Type, $Directory) {
     $Count = $Coll.Count
 
@@ -611,6 +590,9 @@ function Start-GraphFish {
         [switch]
         $includeUsersAndGroups,
 
+        [switch]
+        $signInActivity,
+
         [Parameter()]
         [string]$resourceType,
 
@@ -647,6 +629,7 @@ function Start-GraphFish {
             if ($null -ne $graphToken) {
                 [datetime]$expiresOn = $graphToken.expiresOn
                 $refresh = ($expiresOn - (get-date)).minutes
+                Write-Host $refresh
             }
             else {
                 $refresh = 0
@@ -656,14 +639,15 @@ function Start-GraphFish {
             $refresh = 0
         }
         if ($refresh -le 1) {
-            if ($servicePrincipalId) {
-                az login --service-principal -u $servicePrincipalId -p $servicePrincipalKey --tenant $tenantId
+            Write-Output "Create a Graph Token using the Get-GraphToken command"
+            # if ($servicePrincipalId) {
+            #     az login --service-principal -u $servicePrincipalId -p $servicePrincipalKey --tenant $tenantId
 
-            }
-            else {
-                az login --use-device-code | Out-Null
-            }
-            $graphToken = Get-GraphToken -resource $resourceType
+            # }
+            # else {
+            #     az login --use-device-code --allow-no-subscription | Out-Null
+            #     # $graphToken = Get-GraphToken -Client $resourceType
+            # }
         }
     }
     Process {
@@ -678,7 +662,7 @@ function Start-GraphFish {
 
         #region Active Directory
         $aadRequestHeader = @{
-            "Token"          = ($graphToken.accessToken | ConvertTo-SecureString -AsPlainText -Force)
+            "Token"          = ($graphToken.access_token | ConvertTo-SecureString -AsPlainText -Force)
             "Authentication" = 'OAuth'
             "Method"         = 'GET'
         }
@@ -699,6 +683,9 @@ function Start-GraphFish {
             
             Write-Host "   [-] Collecting Enterprise Applications" -ForegroundColor Yellow
             $applications = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/applications")
+
+            Write-Host "   [-] Collecting Service Principals" -ForegroundColor Yellow
+            $serviceprincipals = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/serviceprincipals")
 
             Write-Host "   [-] Collecting External Users" -ForegroundColor Yellow
             $externalUsers = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/users" -filter "UserType eq 'Guest'" -select "id, displayName, creationType, userPrincipalName, externalUserState, externalUserStateChangeDateTime, createdDateTime")
@@ -741,9 +728,13 @@ function Start-GraphFish {
             Get-Chunk -Type "azglobaladminrights" -Directory $outputDirectory -coll ($roleMembers | Where-Object GroupName -eq "Global Administrator")
             Get-Chunk -Type "azprivroleadminrights" -Directory $outputDirectory -coll ($roleMembers | Where-Object GroupName -eq "Privileged Role Administrator")
             Get-Chunk -Type "azapplicationadmins" -Directory $outputDirectory -coll ($roleMembers | Where-Object GroupName -eq "Application Administrator")
+            Get-Chunk -Type "azroleGroupAssignments" -Directory $outputDirectory -coll ($roleMembers | Where-Object memberType -eq 'group')
 
             Write-Host "   [-] Processing [$($applications.count)] applications" -ForegroundColor Yellow
             $applications  | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-applications.json"
+
+            Write-Host "   [-] Processing [$($serviceprincipals.count)] serviceprincipals" -ForegroundColor Yellow
+            $serviceprincipals  | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-serviceprincipals.json"
             
             $appsArray = @(
                 "azapplicationowners"
