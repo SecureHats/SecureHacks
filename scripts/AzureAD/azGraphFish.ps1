@@ -37,6 +37,7 @@ function Get-GraphRecursive {
         #$Uri = "https://graph.microsoft.com/beta/reports/authenticationMethods/userRegistrationDetails?`$Filter=isAdmin eq true&userType eq member"
     } else {
         $uri = $Url
+<<<<<<< HEAD
     }
 
     if ($Select) {
@@ -68,6 +69,33 @@ function Get-GraphRecursive {
         $apiResult      += $apiResponse.value
     }
 
+=======
+    }
+
+    if ($Select) {
+         if ($uri) {
+            $url = '{0}&$select={1}' -f $uri, "$select"
+         } else {
+            $uri = '{0}?$select={1}' -f $url, "$select"
+         }
+    }
+
+    $apiResponse = Invoke-RestMethod -Uri $uri @aadRequestHeader
+
+    $count        = 0
+    $apiResult    = $apiResponse.value 
+    $userNextLink = $apiResponse."@odata.nextLink"
+
+    while ($null -ne $userNextLink) {
+        $apiResponse    = (Invoke-RestMethod -uri $userNextLink @aadRequestHeader)
+        $count = $count + ($apiResponse.value).count
+        
+        Write-Host "[+] Processed objects $($count)"`r -NoNewline
+        $userNextLink   = $apiResponse."@odata.nextLink"
+        $apiResult      += $apiResponse.value
+    }
+
+>>>>>>> 8e5bd6ec44e58037af0c3890b75a38841831cdf8
     return $apiResult
 }
 
@@ -339,6 +367,7 @@ function Get-RiskyApps {
             'PrivilegedAccess.ReadWrite.AzureADGroup', `
             'PrivilegedAccess.ReadWrite.AzureResources', `
             'Policy.ReadWrite.ConditionalAccess', `
+<<<<<<< HEAD
             'GroupMember.ReadWrite.All', `
             'Mail.Read', `
             'Mail.Read.Shared', `
@@ -347,6 +376,9 @@ function Get-RiskyApps {
             'Mail.ReadWrite.Shared', `
             'Mail.Send', `
             'Mail.Send.Shared'
+=======
+            'GroupMember.ReadWrite.All' `
+>>>>>>> 8e5bd6ec44e58037af0c3890b75a38841831cdf8
         )
 
     $dataHash           = New-Object System.Collections.ArrayList
@@ -682,6 +714,7 @@ function Start-GraphFish {
                 Write-Host "   [-] Collecting Users and Groups ( This may take very long! )" -ForegroundColor Yellow
                 $users = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/users")
                 $groups = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/groups")
+<<<<<<< HEAD
                 
                 Write-Host "   [-] Collecting MFA status for internal users ( This may take very long! )" -ForegroundColor Yellow
                 $mfaStatusInternal = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/reports/authenticationMethods/userRegistrationDetails" -Filter "UserType eq 'Member'")
@@ -724,6 +757,46 @@ function Start-GraphFish {
                 }
             }
             
+=======
+            }
+            
+            Write-Host "   [-] Collecting Directory Roles" -ForegroundColor Yellow
+            $directoryRoles = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/directoryRoles")
+            
+            Write-Host "   [-] Collecting Enterprise Applications" -ForegroundColor Yellow
+            $applications = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/applications")
+
+            Write-Host "   [-] Collecting Service Principals" -ForegroundColor Yellow
+            $serviceprincipals = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/serviceprincipals")
+
+            Write-Host "   [-] Collecting External Users" -ForegroundColor Yellow
+            $externalUsers = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/users" -filter "UserType eq 'Guest'" -select "id, displayName, creationType, userPrincipalName, externalUserState, externalUserStateChangeDateTime, createdDateTime")
+
+            Write-Host "   [-] Collecting Role Members" -ForegroundColor Yellow
+            Get-Members -ArrayObject $directoryRoles -type azrolemembers
+            $roleMembers = (Get-Content $outputDirectory\$date-azrolemembers.json | ConvertFrom-Json).data
+
+            Write-Output "[+] Processing RAW tenant data"
+            Write-Host "   [-] Processing Organizations" -ForegroundColor Yellow
+            $organizations  | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-tenants.json"
+            if ($includeUsersAndGroups){
+                Write-Host "   [-] Processing [$($users.count)] Users" -ForegroundColor Yellow
+                $users | Get-Chunk -Coll $users -Directory $outputDirectory -type "users"
+                
+                Write-Host "   [-] Processing [$($groups.count)] Groups" -ForegroundColor Yellow
+                $groups | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-groups.json"
+                
+                $groupsArray = @(
+                    "azgroupmembers"
+                    "azgroupowners"
+                )
+
+                foreach ($grp in $groupsArray) {
+                    Get-Members -ArrayObject $groups -Type $grp
+                }
+            }
+            
+>>>>>>> 8e5bd6ec44e58037af0c3890b75a38841831cdf8
             Write-Host "   [-] Processing [$($directoryRoles.count)] Directory roles" -ForegroundColor Yellow
             $directoryRoles | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-directoryroles.json"
             
@@ -741,6 +814,7 @@ function Start-GraphFish {
             Get-Chunk -Type "azroleGroupAssignments" -Directory $outputDirectory -coll ($roleMembers | Where-Object memberType -eq 'group')
 
             Write-Host "   [-] Processing [$($applications.count)] applications" -ForegroundColor Yellow
+<<<<<<< HEAD
             $applications | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-applications.json"
 
             $expiredApps = @()
@@ -798,6 +872,13 @@ function Start-GraphFish {
 
             $longlifeSpns | Select-Object Id, displayName, createdDateTime, passwordCredentials | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-longlifeSpns.json"
 
+=======
+            $applications  | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-applications.json"
+
+            Write-Host "   [-] Processing [$($serviceprincipals.count)] serviceprincipals" -ForegroundColor Yellow
+            $serviceprincipals  | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-serviceprincipals.json"
+            
+>>>>>>> 8e5bd6ec44e58037af0c3890b75a38841831cdf8
             $appsArray = @(
                 "azapplicationowners"
                 "azapplicationtosp"
@@ -807,9 +888,12 @@ function Start-GraphFish {
                 Get-Members -ArrayObject $applications -Type $app
             }
             
+<<<<<<< HEAD
             $namedLocations = (invoke-RestMethod -Uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations' @aadRequestHeader).value.displayName
             $namedLocations | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-namedLocations.json"
 
+=======
+>>>>>>> 8e5bd6ec44e58037af0c3890b75a38841831cdf8
             Get-RiskyApps     
             Get-AdminDetails
             Get-PasswordResetRights
