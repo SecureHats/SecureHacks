@@ -8,72 +8,67 @@
 .EXAMPLE
    Get-GraphRecursive -Url "https://graph.microsoft.com/v1.0/groups/<guid>/members?`$select=id,displayName,userPrincipalName,onPremisesDistinguishedName,onPremisesImmutableId" -AccessToken $AccessToken
 #>
+
 function Get-GraphRecursive {
     [CmdletBinding()]
-    [Alias()]
-    Param
-    (
-        [Parameter(Mandatory = $true,
-            Position = 0)]
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$Url,
+
+        [Parameter(Mandatory = $false)]
+        [string]$Filter,
+        
+        [Parameter(Mandatory = $false)]
+        [string]$Select,
+
+        [Parameter(Mandatory = $true)]
         [securestring]$Token,
 
-        # Graph access token
-        [Parameter(Mandatory = $false,
-            Position = 1)]
-        [string]$Method,
+        [Parameter(Mandatory = $true)]
+        [string]$Method = 'GET',
 
-        # Graph access token
-        [Parameter(Mandatory = $false,
-            Position = 2)]
-        [string]$Api,
+        [Parameter(Mandatory = $true)]
+        [string]$Authentication = 'OAuth'
+    
+        )
+    
+    if ($Filter) {
+        $uri = '{0}?$Filter={1}' -f $Url, $Filter
+        #$Uri = "https://graph.microsoft.com/beta/reports/authenticationMethods/userRegistrationDetails?`$Filter=isAdmin eq true&userType eq member"
+    } else {
+        $uri = $Url
+    }
 
-        [Parameter(Mandatory = $true,
-            Position = 3)]
-        [string]$Authentication,
+    if ($Select) {
+         if ($uri) {
+            $url = '{0}&$select={1}' -f $uri, "$select"
+         } else {
+            $uri = '{0}?$select={1}' -f $url, "$select"
+         }
+    }
 
-        [Parameter(Mandatory = $false,
-            Position = 4)]
-        [string]$filter,
+    $apiResponse = Invoke-RestMethod -Uri $uri @aadRequestHeader
 
-        [Parameter(Mandatory = $false,
-            Position = 5)]
-        [string]$select,
+    $count        = 0
+    $i            = 0
+    $apiResult    = $apiResponse.value 
+    $userNextLink = $apiResponse."@odata.nextLink"
 
-        # Graph url
-        [Parameter(Mandatory = $true,
-            ValueFromPipeline = $true,
-            Position = 6)]
-        [String] $Url
-    )
-
-    if ($api) {
-        $url = '{0}?api-version={1}' -f $Url, $Api
-        if ($filter) {
-            $url = '{0}&`filter={1}' -f $Url, $filter
+    while ($null -ne $userNextLink) {
+        $apiResponse    = (Invoke-RestMethod -uri $userNextLink @aadRequestHeader)
+        $count = $count + ($apiResponse.value).count
+        $i++
+        if ($i -gt 50) {
+            Write-host "[-] Prevent lockout"`r -NoNewline
+            Start-Sleep -Seconds 1
+            $i = 0
         }
-    }
-    if ($select) {
-        $url = '{0}&`$select={1}' -f $url, "$select"
-    }
-
-    $result = Invoke-RestMethod -Uri $Url -method $method -Authentication $Authentication -token $token -Verbose:$false
-    if ($result.value) {
-        $Result.value
+        Write-Host "[+] Processed objects $($count)"`r -NoNewline
+        $userNextLink   = $apiResponse."@odata.nextLink"
+        $apiResult      += $apiResponse.value
     }
 
-    # Calls itself when there is a nextlink, in order to get next page
-    try {
-        if ($result.'@odata.nextLink') {
-            Get-GraphRecursive -Url $result.'@odata.nextLink' -method $method -Authentication $Authentication -token $token
-            $resultCount = ($Result.value).count
-            if ($resultCount -gt 1000) {
-                Write-Host "Processing $($resultCount) items"
-            }
-        }
-    }
-    catch {
-        # Nothing to process
-    }
+    return $apiResult
 }
 
 function Get-Members {
@@ -173,7 +168,6 @@ function Get-Members {
                 "TenantDisplayName" = ($organizations | Where-Object id -eq (($account.'@odata.id' -split "/")[4])).displayName
                 "TenantId"          = ($account.'@odata.id' -split "/")[4]
             }
-            #Write-Output $currentItem
             $null = $dataHash.Add($currentItem)
         }
     }
@@ -198,7 +192,7 @@ function Get-Members {
                             AppName                = $item.displayName
                             "$($userType)Name"     = $account.displayName
                             "$($userType)ID"       = $account.id
-                            "$($userType)Type"     = (($account.'@odata.id' -split "\.")[-1])
+                            "$($userType)Type"     = (($account.'@odata.type' -split "\.")[-1])
                             "$($userType)OnPremID" = $account.OnPremisesSecurityIdentifier
                         }
                         Write-Verbose $currentItem
@@ -209,22 +203,19 @@ function Get-Members {
                             AppId              = $item.appId
                             AppName            = $item.displayName
                             "$($userType)ID"   = $account.Id
-                            "$($userType)Type" = (($account.'@odata.id' -split "\.")[-1])
+                            "$($userType)Type" = (($account.'@odata.type' -split "\.")[-1])
                         }
-                        Write-Verbose $currentItem
                         $null = $dataHash.Add($currentItem)
                     }
                     default {
                         $currentItem = [PSCustomObject]@{
                             GroupName              = $item.displayname
-                            GroupID                = $item.id
                             GroupOnPremID          = $item.OnPremisesSecurityIdentifier
                             "$($userType)Name"     = $account.displayName
                             "$($userType)ID"       = $account.id
-                            "$($userType)Type"     = (($account.'@odata.id' -split "\.")[-1])
+                            "$($userType)Type"     = (($account.'@odata.type' -split "\.")[-1])
                             "$($userType)OnPremID" = $account.OnPremisesSecurityIdentifier
                         }
-                        #Write-Verbose $currentItem
                         $null = $dataHash.Add($currentItem)
                     }
                 }
@@ -301,16 +292,14 @@ function Get-PasswordResetRights {
     $dataHash = New-Object System.Collections.ArrayList
 
     $permissionList = (Invoke-WebRequest 'https://raw.githubusercontent.com/SecureHats/SecureHacks/main/documentation/passwordResetRoles.json').content | ConvertFrom-Json
-
+    
     foreach ($item in ($permissionList)) {
-        Write-Host "    [-] Processed $($item.Role)" -ForegroundColor Yellow
+        Write-Host "       [-] Processed $($item.Role)" -ForegroundColor Yellow
         $passwordAdmins = ($RoleMembers | Where-Object GroupName -eq $item.Role)
         if ($passwordAdmins) {
             $adminRoleGroups = ($item.PasswordResetPermissions).Role
 
             foreach ($adminRoleGroup in $adminRoleGroups) {
-                #Write-Output "Admin Role Group" $adminRoleGroup
-                #Write-Output ($RoleMembers | Where-Object GroupName -eq $adminRoleGroup)
                 foreach ($account in ($RoleMembers | Where-Object GroupName -eq $adminRoleGroup)) {
                     foreach ($pwdAdmin in $passwordAdmins) {
                         if ($pwdAdmin.MemberName -ne $account.MemberName) {
@@ -339,20 +328,89 @@ function Get-PasswordResetRights {
     $json | ConvertTo-Json | Out-File "$outputDirectory\$date-azpwdresetrights.json"
 }
 
+function Get-RiskyApps {
+    Write-Host "      [-] Validating [$($applications.count)] Enterprise Applications Risks" -ForegroundColor Yellow
+
+    $permissionList = (Invoke-WebRequest 'https://raw.githubusercontent.com/SecureHats/SecureHacks/main/documentation/AppRegistrationPermissions.csv').content | ConvertFrom-Csv
+    $riskyGrants = $permissionList | Where-Object Permission -in `
+        (`
+            'Directory.ReadWrite.All', `
+            'PrivilegedAccess.ReadWrite.AzureAD', `
+            'PrivilegedAccess.ReadWrite.AzureADGroup', `
+            'PrivilegedAccess.ReadWrite.AzureResources', `
+            'Policy.ReadWrite.ConditionalAccess', `
+            'GroupMember.ReadWrite.All', `
+            'Mail.Read', `
+            'Mail.Read.Shared', `
+            'Mail.ReadBasic', `
+            'Mail.ReadWrite', `
+            'Mail.ReadWrite.Shared', `
+            'Mail.Send', `
+            'Mail.Send.Shared'
+        )
+
+    $dataHash           = New-Object System.Collections.ArrayList
+    $riskyApps          = New-Object System.Collections.ArrayList
+    $permissionObjects  = @()
+    
+    foreach ($application in $applications) {
+        foreach ($riskyGrant in $riskyGrants) {
+            if ($application.requiredResourceAccess.resourceaccess.id -contains $riskyGrant.id) {
+                $permissionObjects += ($riskyGrant.Permission)
+            }
+
+            if ($permissionObjects.count -gt 0) {
+                $null = $riskyApps.add($application)
+            }
+        }
+
+        if ($permissionObjects.count -gt 0) {
+                    
+            $currentItem = [PSCustomObject]@{
+                Id              = $application.Id
+                DisplayName     = $application.displayname
+                createdDateTime = $application.createdDateTime
+                Permission      = $permissionObjects | Sort-Object -Unique
+            }
+
+            if ($application.passwordCredentials.keyId) {
+                $currentItem | Add-Member -MemberType NoteProperty -Name Credentials -Value $application.passwordCredentials -Force
+            }
+
+            if ($application.keyCredentials.value) {
+                $currentItem | Add-Member -MemberType NoteProperty -Name keyCredentials -Value $application.keyCredentials -Force
+            }
+                    
+            $null = $dataHash.Add($currentItem)
+        }
+        $permissionObjects = @()
+                
+    }
+            
+    $json = [ordered]@{}
+    $null = $json.add("data", ($dataHash))
+
+    Get-Chunk -Coll $json -Directory $outputDirectory -Type "riskyApps"
+    $json | ConvertTo-Json -depth 10 | Out-File "$outputDirectory\$date-azriskyApps.json"
+}
+
 #https://learn.microsoft.com/en-us/graph/api/resources/user?view=graph-rest-beta
 function Get-AdminDetails {
-    Write-Host "[+] Processing Password Reset Permissions" -ForegroundColor Yellow
+    Write-Host "   [-] Processing Password Reset Permissions" -ForegroundColor Yellow
     $metadata = New-Object System.Collections.ArrayList
     $dataHash = New-Object System.Collections.ArrayList
 
             
     foreach ($account in ($roleMembers | Where-Object GroupName -like "*Admin*")) {
     
-        Write-Verbose "$baseUrl/users/$($account.memberID)?select=id,displayName,userPrincipalName,jobTitle,accountEnabled,createdDateTime,lastPasswordChangeDateTime,passwordProfile,passwordPolicies"
         try {
-            $adminUser = Invoke-RestMethod -uri "$baseUrl/users/$($account.memberID)?select=id, displayName, userPrincipalName, jobTitle, accountEnabled, createdDateTime, lastPasswordChangeDateTime, passwordProfile, passwordPolicies" @aadRequestHeader
-
-        $currentItem = [PSCustomObject]@{
+            $uri = "$baseUrl/users/$($account.memberID)?select=id, displayName, userPrincipalName, jobTitle, accountEnabled, createdDateTime, lastPasswordChangeDateTime, passwordProfile, passwordPolicies"
+            
+            if ($signInActivity) { $uri = "$baseUrl/users/$($account.memberID)?select=id, displayName, userPrincipalName, jobTitle, accountEnabled, createdDateTime, lastPasswordChangeDateTime, passwordProfile, passwordPolicies, signInActivity"}
+            
+            $adminUser = Invoke-RestMethod -uri $uri @aadRequestHeader
+        
+            $currentItem = [PSCustomObject]@{
             accountEnabled             = $adminUser.accountEnabled
             UserName                   = $adminUser.displayName
             UserPrincipalName          = $adminUser.userPrincipalName
@@ -363,6 +421,7 @@ function Get-AdminDetails {
             lastPasswordChangeInDays   = ($adminUser.lastPasswordChangeDateTime - (Get-Date)).days
             passwordProfile            = $adminUser.passwordProfile
             passwordPolicies           = $adminUser.passwordPolicies
+            signInActivity              = $adminUser.signInActivity.lastSignInDateTime
             
         }
         $null = $dataHash.Add($currentItem)
@@ -382,42 +441,87 @@ function Get-AdminDetails {
 }
 
 function Get-GraphToken {
-    [CmdletBinding()]
-    [OutputType([string])]
-    param (
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
-        [ValidateSet('AzureAd', 'Azure', 'Monitor')]
-        [string]$resource
+    [cmdletbinding()]
+    Param(
+        [Parameter(Mandatory = $True)]
+        [String[]]
+        [ValidateSet("MSGraph", "Azure", "Monitor")]
+        $Client,    
+        [Parameter(Mandatory = $False)]
+        [String]
+        $Resource = "https://graph.microsoft.com"
+        
     )
-
-    Begin {
-        try {
-            az version | out-Null
+    
+    switch ($Client) {
+        "MSGraph" {
+            $body = @{
+                "client_id" = "d3590ed6-52b3-4102-aeff-aad2292ab01c"
+                "resource"  = "https://graph.microsoft.com/"
+            }
         }
-        catch {
-            Write-Output "Azure CLI is required to run az-GraphFish. Press any key to continue (except the power button)"
-            Invoke-WebRequest -Uri https://aka.ms/installazurecliwindows -OutFile .\AzureCLI.msi; Start-Process msiexec.exe -Wait -ArgumentList '/I AzureCLI.msi /quiet'; Remove-Item .\AzureCLI.msi
+        "Azure" {
+            $body = @{
+                "client_id" = "d3590ed6-52b3-4102-aeff-aad2292ab01c"
+                "resource"  = "https://management.core.windows.net"
+            }
+        }
+        "Monitor" {
+            $body = @{
+                "client_id" = "d3590ed6-52b3-4102-aeff-aad2292ab01c"
+                "resource"  = "https://monitor.azure.com/"
+                "scope" = [System.Web.HttpUtility]::UrlEncode("https://monitor.azure.com//.default")
+            }
         }
     }
-    Process {
-        try {
-            # https://docs.microsoft.com/en-us/cli/azure/account?view=azure-cli-latest#az_account_get_access_token
-            if ($resource -eq "AzureAD") {
-                Write-Output "Grabbing Azure AD Token"
-                $_graphToken = (az account get-access-token --resource-type ms-graph | ConvertFrom-Json)
-            }
-            else {
-                Write-Output "Grabbing Azure Resource Token"
-                $_graphToken = (az account get-access-token | ConvertFrom-Json)
-            }
 
-            return $_graphToken
+    # Login Process
+    $authResponse = Invoke-RestMethod `
+        -UseBasicParsing `
+        -Method Post `
+        -Uri "https://login.microsoftonline.com/common/oauth2/devicecode?api-version=1.0" `
+        -Body $body
+    
+    Write-Output $authResponse.message
+    $continue = $true
+    
+    $body = @{
+        "client_id"  = "d3590ed6-52b3-4102-aeff-aad2292ab01c"
+        "grant_type" = "urn:ietf:params:oauth:grant-type:device_code"
+        "code"       = $authResponse.device_code
+    }
+    while ($continue) {
+        Start-Sleep -Seconds $authResponse.interval
+        $total += $authResponse.interval
+
+        if ($total -gt ($authResponse.expires_in)) {
+            Write-Error "Timeout occurred"
+            return
+        }          
+        try {
+            $global:graphToken = Invoke-RestMethod `
+                -UseBasicParsing `
+                -Method Post `
+                -Uri "https://login.microsoftonline.com/Common/oauth2/token?api-version=1.0 " `
+                -Body $body `
+                -ErrorAction SilentlyContinue
         }
         catch {
-            Write-Error $Error #"Unable to process graph token request"
+            $details = $_.ErrorDetails.Message | ConvertFrom-Json
+            $continue = $details.error -eq "authorization_pending"
+            Write-Output "Waiting for approval: $($continue)"
+
+            if (!$continue) {
+                Write-Error $details.error_description
+                return
+            }
+        }
+        if($graphToken) {
+            break
         }
     }
 }
+
 function Get-Chunk($Coll, $Type, $Directory) {
     $Count = $Coll.Count
 
@@ -493,8 +597,14 @@ function Start-GraphFish {
     [OutputType([string])]
     param (
         [Parameter()]
-        [bool]
+        [switch]
         $Hound,
+
+        [switch]
+        $includeUsersAndGroups,
+
+        [switch]
+        $signInActivity,
 
         [Parameter()]
         [string]$resourceType,
@@ -523,15 +633,16 @@ function Start-GraphFish {
                            ┃┃
                            ╰╯"
 
-        $date = get-date -f yyyyMMddhhmmss
-        $baseUrl = 'https://graph.microsoft.com/beta'
-        $mngtUrl = 'https://management.azure.com'
-        $outputDirectory = $(Get-Location)
+            $date = get-date -f yyyyMMddhhmmss
+            $baseUrl = 'https://graph.microsoft.com/beta'
+            $mngtUrl = 'https://management.azure.com'
+            $outputDirectory = $(Get-Location)
 
         try {
             if ($null -ne $graphToken) {
                 [datetime]$expiresOn = $graphToken.expiresOn
                 $refresh = ($expiresOn - (get-date)).minutes
+                Write-Host $refresh
             }
             else {
                 $refresh = 0
@@ -541,14 +652,8 @@ function Start-GraphFish {
             $refresh = 0
         }
         if ($refresh -le 1) {
-            if ($servicePrincipalId) {
-                az login --service-principal -u $servicePrincipalId -p $servicePrincipalKey --tenant $tenantId
-
-            }
-            else {
-                az login --use-device-code | Out-Null
-            }
-            $graphToken = Get-GraphToken -resource $resourceType
+            Write-Output "Create a Graph Token using the Get-GraphToken command"
+            Get-GraphToken -Client MSGraph
         }
     }
     Process {
@@ -563,61 +668,152 @@ function Start-GraphFish {
 
         #region Active Directory
         $aadRequestHeader = @{
-            "Token"          = ($graphToken.accessToken | ConvertTo-SecureString -AsPlainText -Force)
+            "Token"          = ($graphToken.access_token | ConvertTo-SecureString -AsPlainText -Force)
             "Authentication" = 'OAuth'
             "Method"         = 'GET'
         }
 
         if ($resourceType -eq 'AzureAd') {
-            Write-Output "Collecting RAW tenant data"
+            Write-Output "`n[+] Collecting RAW tenant data"
+            Write-Host "   [-] Collecting Directory Roles" -ForegroundColor Yellow
             $organizations = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/organization")
-            $users = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/users")
-            $groups = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/groups")
-            $directoryRoles = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/directoryRoles")
-            $applications = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/applications")
-            Get-Members -ArrayObject $directoryRoles -type azrolemembers
+            
+            if ($includeUsersAndGroups) { 
+                Write-Host "   [-] Collecting Users and Groups ( This may take very long! )" -ForegroundColor Yellow
+                $users = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/users")
+                $groups = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/groups")
+                
+                Write-Host "   [-] Collecting MFA status for internal users ( This may take very long! )" -ForegroundColor Yellow
+                $mfaStatusInternal = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/reports/authenticationMethods/userRegistrationDetails" -Filter "UserType eq 'Member'")
+            }
 
+            Write-Host "   [-] Collecting Directory Roles" -ForegroundColor Yellow
+            $directoryRoles = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/directoryRoles")
+            
+            Write-Host "   [-] Collecting Enterprise Applications" -ForegroundColor Yellow
+            $applications = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/applications")
+
+            Write-Host "   [-] Collecting Service Principals" -ForegroundColor Yellow
+            $serviceprincipals = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/serviceprincipals")
+
+            Write-Host "   [-] Collecting External Users" -ForegroundColor Yellow
+            $externalUsers = (Get-GraphRecursive @aadRequestHeader -Url "$baseUrl/users" -filter "UserType eq 'Guest'" -select "id, displayName, creationType, userPrincipalName, externalUserState, externalUserStateChangeDateTime, createdDateTime, signInActivity")
+
+            Write-Host "   [-] Collecting Role Members" -ForegroundColor Yellow
+            Get-Members -ArrayObject $directoryRoles -type azrolemembers
             $roleMembers = (Get-Content $outputDirectory\$date-azrolemembers.json | ConvertFrom-Json).data
 
-            Write-Host "[+] Processing Organizations" -ForegroundColor Yellow
-            $organizations  | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-tenants.json"
-            Write-Host "[+] Processing [$($users.count)] Users" -ForegroundColor Yellow
-            $users          | Get-Chunk -Coll $users -Directory $outputDirectory -type "users"
-            Write-Host "[+] Processing [$($groups.count)] Groups" -ForegroundColor Yellow
-            
-            $groups         | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-groups.json"
+            Write-Output "[+] Processing RAW tenant data"
+            Write-Host "   [-] Processing Organizations" -ForegroundColor Yellow
+            $organizations | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-tenants.json"
+            if ($includeUsersAndGroups){
+                Write-Host "   [-] Processing [$($users.count)] Users" -ForegroundColor Yellow
+                #Get-Chunk -Type "azuseraccounts" -Coll $users -Directory $outputDirectory -type "users"
+                Get-Chunk -`Type "azmfastatus" -Coll $mfaStatusInternal | Out-File "$outputDirectory\$date-mfaStatus.json"
+                
+                Write-Host "   [-] Processing [$($groups.count)] Groups" -ForegroundColor Yellow
+                $groups | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-groups.json"
+                
+                $groupsArray = @(
+                    "azgroupmembers"
+                    "azgroupowners"
+                )
 
-            foreach ($grp in $groupsArray) {
-                Get-Members -ArrayObject $groups -Type $grp
+                foreach ($grp in $groupsArray) {
+                    Get-Members -ArrayObject $groups -Type $grp
+                }
             }
             
-            Write-Host "[+] Processing [$($directoryRoles.count)] Directory roles" -ForegroundColor Yellow
+            Write-Host "   [-] Processing [$($directoryRoles.count)] Directory roles" -ForegroundColor Yellow
             $directoryRoles | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-directoryroles.json"
-            Write-Host "[+] Processing [$($roleMembers.count)] role assignments" -ForegroundColor Yellow
+            
+            Write-Host "   [-] Processing [$($externalUsers.count)] External users" -ForegroundColor Yellow
+            $externalUsers | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-externalUsers.json"
+
+            $pendingUsers = $externalUsers | Where-Object externalUserState -notin @('Accepted', $null) | Where-Object { (New-TimeSpan -Start (Get-Date($_.externalUserStateChangeDateTime)) -End (Get-Date)).Days -gt 90 }
+            Write-Host "      [-] Processing [$($pendingUsers.count)] External users with more than 90 pending status" -ForegroundColor Yellow
+            $pendingUsers | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-pendingExternalUsers.json"
+
+            Write-Host "   [-] Processing [$($roleMembers.count)] role assignments" -ForegroundColor Yellow
             Get-Chunk -Type "azglobaladminrights" -Directory $outputDirectory -coll ($roleMembers | Where-Object GroupName -eq "Global Administrator")
             Get-Chunk -Type "azprivroleadminrights" -Directory $outputDirectory -coll ($roleMembers | Where-Object GroupName -eq "Privileged Role Administrator")
             Get-Chunk -Type "azapplicationadmins" -Directory $outputDirectory -coll ($roleMembers | Where-Object GroupName -eq "Application Administrator")
+            Get-Chunk -Type "azroleGroupAssignments" -Directory $outputDirectory -coll ($roleMembers | Where-Object memberType -eq 'group')
 
-            Write-Host "[+] Processing [$($applications.count)] applications" -ForegroundColor Yellow
-            $applications   | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-applications.json"
-            
-            foreach ($app in $appsArray) {
-                Get-Members -ArrayObject $applications -Type $app
+            Write-Host "   [-] Processing [$($applications.count)] applications" -ForegroundColor Yellow
+            $applications | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-applications.json"
+
+            $expiredApps = @()
+            foreach ($app in $applications) {
+                if ($app.passwordCredentials) {
+                    $passwordDate = ($app.passwordCredentials | Sort-Object endDateTime -Descending)[0]
+                    $span = New-TimeSpan -Start (Get-Date) -End (Get-Date -Date $passwordDate.endDateTime)
+                    if ($span.Days -lt -90) {
+                        $expiredApps += $app
+                    }
+                }
             }
 
-            $groupsArray = @(
-                "azgroupmembers"
-                "azgroupowners"
-            )
+            $expiredApps | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-expiredApps.json"
+
+            $longlifeApps = @()
+            foreach ($app in $applications) {
+                if ($app.passwordCredentials) {
+                    $passwordDate = ($app.passwordCredentials | Sort-Object endDateTime -Descending)[0]
+                    $span = New-TimeSpan -Start (Get-Date $passwordDate.startDateTime) -End (Get-Date -Date $passwordDate.endDateTime)
+                    if ($span.Days -gt 366) {
+                        $longlifeApps += $app
+                    }
+                }
+            }
+
+            $longlifeApps | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-longlifeApps.json"
+
+            Write-Host "   [-] Processing [$($serviceprincipals.count)] serviceprincipals" -ForegroundColor Yellow
+            $serviceprincipals | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-serviceprincipals.json"
+            
+            $expiredSpns = @()
+            foreach ($spn in $serviceprincipals) {
+                if ($spn.passwordCredentials) {
+                    $passwordDate = ($spn.passwordCredentials | Sort-Object endDateTime -Descending)[0]
+                    $span = New-TimeSpan -Start (Get-Date) -End (Get-Date -Date $passwordDate.endDateTime)
+                    if ($span.Days -lt -90) {
+                        $expiredSpns += $spn
+                    }
+                }
+            }
+
+            $expiredSpns | Select-Object Id, displayName, createdDateTime, passwordCredentials | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-expiredSpns.json"
+
+            $longlifeSpns = @()
+            foreach ($spn in $serviceprincipals) {
+                if ($spn.passwordCredentials) {
+                    $passwordDate = ($spn.passwordCredentials | Sort-Object endDateTime -Descending)[0]
+                    $span = New-TimeSpan -Start (Get-Date -Date $passwordDate.startDateTime) -End (Get-Date -Date $passwordDate.endDateTime)
+                    if ($span.Days -gt 366) {
+                        $longlifeSpns += $spn
+                    }
+                }
+            }
+
+            $longlifeSpns | Select-Object Id, displayName, createdDateTime, passwordCredentials | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-longlifeSpns.json"
 
             $appsArray = @(
                 "azapplicationowners"
                 "azapplicationtosp"
             )
+            
+            foreach ($app in $appsArray) {
+                Get-Members -ArrayObject $applications -Type $app
+            }
+            
+            $namedLocations = (invoke-RestMethod -Uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations' @aadRequestHeader).value.displayName
+            $namedLocations | ConvertTo-Json -Depth 10 | Out-File "$outputDirectory\$date-namedLocations.json"
 
+            Get-RiskyApps     
             Get-AdminDetails
             Get-PasswordResetRights
-
+            
             if ($hound) {
                 Write-Output "Building AzureHound Export"
                 export-data $organizations -type aztenants
@@ -625,8 +821,7 @@ function Start-GraphFish {
                 export-data $groups -type azgroups
                 export-data $directoryRoles -type azdirectoryroles
                 export-data $applications -type azapplicationowners
-            }
-                    
+            }           
         }
 
         if ($resourceType -eq 'Azure') {
@@ -638,7 +833,7 @@ function Start-GraphFish {
             #    "Method"         = 'GET'
             #}
 
-            $subscriptions = (Get-GraphRecursive @aadRequestHeader -api '2020-01-01' -Url "$mngtUrl/subscriptions")t
+            $subscriptions = (Get-GraphRecursive @aadRequestHeader -api '2020-01-01' -Url "$mngtUrl/subscriptions")
             foreach ($subid in $subscriptions.subscriptionId) {
                 $subroles = (Get-GraphRecursive @aadRequestHeader -api '2018-07-01' -Url "$mngtUrl/subscriptions/$subId/providers/Microsoft.Authorization/roleDefinitions")
                 $subRoleAssignments = (Get-GraphRecursive @aadRequestHeader -api '2020-04-01-preview' -Url "$mngtUrl/subscriptions/$subId/providers/Microsoft.Authorization/roleAssignments")
@@ -657,7 +852,6 @@ function Start-GraphFish {
     }
     End {}
 }
-
 
 # #Current User Permissions
 # $permissions = (Get-GraphRecursive -Url "$mngtUrl/subscriptions/$subId/resourcegroups/{resourceGroupName}/providers/Microsoft.Authorization/permissions" @requestBody -api '2018-07-01')
